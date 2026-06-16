@@ -1,11 +1,26 @@
 import Link from "next/link"
-import { Coffee, Lock, Mail, GitGraph } from "lucide-react"
+import { Coffee } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 
-export default function LoginPage() {
+import { LoginForm } from "./login-form"
+
+type LoginPageProps = {
+  searchParams: Promise<{
+    signup?: string
+    redirect?: string
+  }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { signup, redirect } = await searchParams
+  const redirectTo = parseRedirectPath(redirect)
+
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-950">
+      <div className="fixed right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
         {/* 로그인 페이지 상단 로고 영역입니다. */}
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-semibold">
@@ -22,63 +37,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* 지금은 화면 연습용 form입니다. 실제 로그인 API 연결은 나중에 추가합니다. */}
-          <form className="flex flex-col gap-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-neutral-800"
-              >
-                이메일
-              </label>
-
-              <div className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3">
-                <Mail className="size-4 text-neutral-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="coffee@example.com"
-                  className="h-10 w-full border-0 bg-transparent text-sm outline-none placeholder:text-neutral-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-neutral-800"
-              >
-                비밀번호
-              </label>
-
-              <div className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3">
-                <Lock className="size-4 text-neutral-400" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="비밀번호를 입력하세요"
-                  className="h-10 w-full border-0 bg-transparent text-sm outline-none placeholder:text-neutral-400"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-neutral-600">
-                <input type="checkbox" className="size-4" />
-                로그인 유지
-              </label>
-
-              <Link href="/forgot-password" className="font-medium hover:text-neutral-950">
-                비밀번호 찾기
-              </Link>
-            </div>
-
-            <Button type="submit" className="mt-2 w-full">
-              로그인
-            </Button>
-          </form>
+          <LoginForm signupSuccess={signup === "success"} redirectTo={redirectTo} />
 
           {/* 일반 로그인과 OAuth 로그인을 시각적으로 분리하는 선입니다. */}
           <div className="my-6 flex items-center gap-3">
@@ -118,9 +77,25 @@ export default function LoginPage() {
         </section>
 
         <p className="mt-6 text-center text-xs leading-5 text-neutral-500">
-          로그인하면 CoffeeProd의 이용약관 및 개인정보처리방침에 동의한 것으로 간주됩니다.
+          로그인하면 CoffeeProd의{" "}
+          <Link href="/terms" className="font-medium text-neutral-700 hover:text-neutral-950">
+            이용약관
+          </Link>{" "}
+          및{" "}
+          <Link href="/privacy" className="font-medium text-neutral-700 hover:text-neutral-950">
+            개인정보처리방침
+          </Link>
+          에 동의한 것으로 간주됩니다.
         </p>
       </div>
     </main>
   )
+}
+
+function parseRedirectPath(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/"
+  }
+
+  return value
 }
