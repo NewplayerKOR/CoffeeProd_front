@@ -195,7 +195,7 @@ export function AboutExperience() {
       }
 
       const nextSectionId = sectionIds[nextIndex]
-      const nextSection = scrollContainer.querySelector<HTMLElement>(
+      const nextSection = scrollContainer?.querySelector<HTMLElement>(
         `[data-section-id="${nextSectionId}"]`
       )
 

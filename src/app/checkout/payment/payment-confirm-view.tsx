@@ -122,6 +122,8 @@ export function PaymentConfirmView({
           customerKey: getOrCreateCustomerKey(),
         })
 
+        if (amount === null) return
+
         widgetsRef.current = widgets
         await widgets.setAmount({ currency: "KRW", value: amount })
 

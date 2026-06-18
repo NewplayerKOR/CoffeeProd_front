@@ -215,9 +215,10 @@ export function MembersAdminView() {
     }))
 
     if (updatedMember.status !== "WITHDRAWN") {
+      const nextStatus = updatedMember.status;
       setStatusDrafts((current) => ({
         ...current,
-        [updatedMember.id]: updatedMember.status,
+        [updatedMember.id]: nextStatus,
       }))
     }
   }
