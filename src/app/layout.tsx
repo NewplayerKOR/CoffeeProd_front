@@ -36,8 +36,7 @@ export default function RootLayout({
             __html: `
 try {
   var storedTheme = window.localStorage.getItem("coffeeprod.theme");
-  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+  if (storedTheme === "dark") {
     document.documentElement.classList.add("dark");
   }
 } catch (_) {}
