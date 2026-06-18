@@ -23,6 +23,9 @@ export type OrderDetail = {
   orderId: number
   tossOrderId: string
   status: OrderStatus
+  productTotalPrice: number
+  deliveryFee: number
+  earnedMileage: number
   totalPrice: number
   usedMileage: number
   deliveryAddress: string

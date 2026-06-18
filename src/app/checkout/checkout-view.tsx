@@ -17,6 +17,7 @@ import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { getCart, type Cart } from "@/lib/api/cart"
 import { createOrder } from "@/lib/api/order"
 import { ApiError } from "@/lib/api/types"
+import { calculateEstimatedDeliveryFee } from "@/lib/order-pricing"
 
 import { CartNavButton } from "../cart/cart-nav-button"
 
@@ -47,7 +48,11 @@ export function CheckoutView() {
 
     return Math.min(member.mileage, cart.totalPrice)
   }, [cart.totalPrice, member])
-  const expectedPayment = Math.max(cart.totalPrice - usedMileage, 0)
+  const estimatedDeliveryFee = calculateEstimatedDeliveryFee(cart.totalPrice)
+  const expectedPayment = Math.max(
+    cart.totalPrice - usedMileage + estimatedDeliveryFee,
+    0
+  )
 
   useEffect(() => {
     let isActive = true
@@ -337,6 +342,14 @@ export function CheckoutView() {
                   value={`${cart.totalPrice.toLocaleString()}원`}
                 />
                 <SummaryRow
+                  label="예상 배송비"
+                  value={
+                    estimatedDeliveryFee === 0
+                      ? "무료"
+                      : `${estimatedDeliveryFee.toLocaleString()}원`
+                  }
+                />
+                <SummaryRow
                   label="사용 마일리지"
                   value={`-${usedMileage.toLocaleString()}P`}
                 />
@@ -347,6 +360,9 @@ export function CheckoutView() {
                   {expectedPayment.toLocaleString()}원
                 </span>
               </div>
+              <p className="mt-2 text-xs leading-5 text-neutral-500">
+                최종 배송비와 결제 금액은 주문 생성 시 서버에서 확정됩니다.
+              </p>
 
               <Button
                 type="submit"

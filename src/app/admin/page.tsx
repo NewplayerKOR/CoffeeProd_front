@@ -1,7 +1,9 @@
 import Link from "next/link"
 import {
+  BarChart3,
   Boxes,
   FolderTree,
+  MessageCircle,
   Plus,
   ReceiptText,
   Settings,
@@ -44,13 +46,25 @@ const adminLinks = [
     description: "전체 주문 상태를 변경하고 배송 운송장을 등록합니다.",
     icon: ReceiptText,
   },
+  {
+    href: "/admin/qnas",
+    title: "상품 문의 관리",
+    description: "답변 대기 상품 문의를 확인하고 관리자 답변을 등록합니다.",
+    icon: MessageCircle,
+  },
+  {
+    href: "/admin/statistics",
+    title: "매출 통계",
+    description: "일·월·연도별 주문 매출을 조회하고 일자별 통계를 재집계합니다.",
+    icon: BarChart3,
+  },
 ]
 
 export default function AdminPage() {
   return (
     <AdminPageShell
       title="관리자 콘솔"
-      description="상품, 카테고리, 회원, 주문 운영 작업을 처리하는 관리자 화면입니다."
+      description="상품, 카테고리, 회원, 주문, 고객 문의와 매출 통계를 관리합니다."
     >
       <AdminAuthGuard>
         <section className="grid gap-4 md:grid-cols-3">

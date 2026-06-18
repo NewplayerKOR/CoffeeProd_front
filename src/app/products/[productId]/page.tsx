@@ -16,10 +16,15 @@ import {
   type RoastLevel,
 } from "@/lib/api/catalog"
 import { ApiError } from "@/lib/api/types"
+import {
+  DELIVERY_BASE_FEE,
+  DELIVERY_FREE_THRESHOLD,
+} from "@/lib/order-pricing"
 import { cn } from "@/lib/utils"
 
 import { CartNavButton } from "../../cart/cart-nav-button"
 import { ProductImage } from "../product-image"
+import { ProductQnas, ProductReviews } from "./product-community"
 import { ProductPurchaseForm } from "./product-purchase-form"
 
 const detailTabs = [
@@ -247,21 +252,11 @@ function ProductDetailTab({
   selectedTab: DetailTabId
 }) {
   if (selectedTab === "reviews") {
-    return (
-      <StaticGuide
-        title="리뷰"
-        description="아직 등록된 리뷰가 없습니다. 리뷰 API가 제공되면 실제 리뷰 목록과 작성 기능을 연결합니다."
-      />
-    )
+    return <ProductReviews productId={product.id} />
   }
 
   if (selectedTab === "qna") {
-    return (
-      <StaticGuide
-        title="Q&A"
-        description="상품 문의 API가 제공되면 문의 목록과 작성 기능을 연결합니다."
-      />
-    )
+    return <ProductQnas productId={product.id} />
   }
 
   if (selectedTab === "faq") {
@@ -295,7 +290,11 @@ function ProductDetailTab({
           <h2 className="text-xl font-bold">배송 정보</h2>
         </div>
         <ul className="mt-5 flex flex-col gap-2 text-sm leading-6 text-neutral-600">
-          <li>배송비는 3,000원이며 50,000원 이상 구매 시 무료 배송입니다.</li>
+          <li>
+            배송비는 {DELIVERY_BASE_FEE.toLocaleString()}원이며 상품 금액{" "}
+            {DELIVERY_FREE_THRESHOLD.toLocaleString()}원 이상 구매 시 무료
+            배송입니다.
+          </li>
           <li>평일 오전 주문 건은 영업일 기준 1-2일 안에 출고됩니다.</li>
           <li>제주 및 도서산간 지역은 추가 배송비가 발생할 수 있습니다.</li>
         </ul>
@@ -326,21 +325,6 @@ function ProductSpec({ label, value }: { label: string; value: string }) {
       <dt className="font-medium text-neutral-500">{label}</dt>
       <dd className="mt-1 font-semibold text-neutral-900">{value}</dd>
     </div>
-  )
-}
-
-function StaticGuide({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <section>
-      <h2 className="text-xl font-bold">{title}</h2>
-      <p className="mt-3 text-sm leading-6 text-neutral-600">{description}</p>
-    </section>
   )
 }
 

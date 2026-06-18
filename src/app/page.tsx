@@ -16,6 +16,7 @@ import { CartNavButton } from "./cart/cart-nav-button"
 import { HomeAuthActions } from "./home-auth-actions"
 import { HomeFeatureCards } from "./home-feature-cards"
 import { HomeSlider, type HomeSlide } from "./home-slider"
+import { PortfolioNoticeDialog } from "./portfolio-notice-dialog"
 import { ProductImage } from "./products/product-image"
 
 export default async function Home() {
@@ -24,6 +25,7 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col bg-neutral-50 text-neutral-950">
+      <PortfolioNoticeDialog />
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
         <header className="flex flex-col gap-4 border-b border-neutral-200 py-4 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="flex items-center gap-2 font-semibold">
@@ -144,8 +146,7 @@ export default async function Home() {
                 CoffeeProd
               </div>
               <p className="mt-3 leading-6">
-                CoffeeProd는 커피 커머스 학습을 위한 프론트엔드
-                프로젝트입니다. 실제 판매 서비스가 아닌 포트폴리오 목적의 예제
+                CoffeeProd는 학습을 위한 프로젝트입니다. 실제 판매 서비스가 아닌 포트폴리오 목적의 예제
                 사이트입니다.
               </p>
             </div>

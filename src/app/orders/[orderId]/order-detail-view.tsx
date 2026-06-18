@@ -267,8 +267,28 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
               <h2 className="text-lg font-bold">결제 요약</h2>
               <div className="mt-5 flex flex-col gap-3 border-y border-neutral-200 py-4 text-sm">
                 <SummaryRow
+                  label="상품 금액"
+                  value={`${order.productTotalPrice.toLocaleString()}원`}
+                />
+                <SummaryRow
+                  label="배송비"
+                  value={
+                    order.deliveryFee === 0
+                      ? "무료"
+                      : `${order.deliveryFee.toLocaleString()}원`
+                  }
+                />
+                <SummaryRow
                   label="사용 마일리지"
                   value={`-${order.usedMileage.toLocaleString()}P`}
+                />
+                <SummaryRow
+                  label="적립 마일리지"
+                  value={
+                    order.earnedMileage > 0
+                      ? `+${order.earnedMileage.toLocaleString()}P`
+                      : "결제 완료 후 적립"
+                  }
                 />
                 <SummaryRow
                   label="주문 상태"

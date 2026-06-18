@@ -9,7 +9,7 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/cart"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { ApiError } from "@/lib/api/types"
+import { calculateEstimatedDeliveryFee } from "@/lib/order-pricing"
 import { ProductImage } from "@/app/products/product-image"
 
 const emptyCart: Cart = {
@@ -49,13 +50,7 @@ export function CartView() {
   const [message, setMessage] = useState<string | null>(null)
 
   const hasItems = cart.items.length > 0
-  const shippingFee = useMemo(() => {
-    if (!hasItems || cart.totalPrice >= 50000) {
-      return 0
-    }
-
-    return 3000
-  }, [cart.totalPrice, hasItems])
+  const shippingFee = calculateEstimatedDeliveryFee(cart.totalPrice)
   const orderTotal = cart.totalPrice + shippingFee
 
   useEffect(() => {
