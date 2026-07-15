@@ -19,6 +19,10 @@ import {
   type AdminProductRequest,
 } from "@/lib/api/admin"
 import {
+  getAdminCoffeeProfiles,
+  type CoffeeProfile,
+} from "@/lib/api/coffee"
+import {
   getCategories,
   type Category,
   type ProductDetail,
@@ -33,6 +37,9 @@ type ProductAdminFormProps = {
 
 type ProductFormState = {
   categoryId: string
+  coffeeProfileId: string
+  sku: string
+  weightGrams: string
   name: string
   price: string
   stockQuantity: string
@@ -45,6 +52,9 @@ type ProductFormErrors = Partial<Record<keyof ProductFormState, string>>
 
 const initialFormState: ProductFormState = {
   categoryId: "",
+  coffeeProfileId: "",
+  sku: "",
+  weightGrams: "200",
   name: "",
   price: "",
   stockQuantity: "",
@@ -68,6 +78,7 @@ const fieldErrorClassName = "mt-1.5 text-xs font-medium text-red-600"
 export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
   const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
+  const [coffeeProfiles, setCoffeeProfiles] = useState<CoffeeProfile[]>([])
   const [form, setForm] = useState<ProductFormState>(initialFormState)
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [message, setMessage] = useState<string | null>(null)
@@ -90,8 +101,9 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
       setMessage(null)
 
       try {
-        const [nextCategories, product] = await Promise.all([
+        const [nextCategories, profilesPage, product] = await Promise.all([
           getCategories(),
+          getAdminCoffeeProfiles({ page: 0, size: 100, sort: "profileName,asc" }),
           mode === "edit" && productId
             ? getAdminProduct(productId)
             : Promise.resolve(null),
@@ -102,6 +114,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
         }
 
         setCategories(nextCategories)
+        setCoffeeProfiles(profilesPage.content)
 
         if (product) {
           setForm(toFormState(product))
@@ -243,6 +256,45 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
             </select>
           </Field>
 
+          <Field label="커피 프로필" error={errors.coffeeProfileId}>
+            <select
+              name="coffeeProfileId"
+              value={form.coffeeProfileId}
+              disabled={isSubmitting}
+              className={inputClassName}
+              aria-invalid={Boolean(errors.coffeeProfileId)}
+              onChange={handleInputChange}
+            >
+              <option value="">연결하지 않음</option>
+              {coffeeProfiles.map((profile) => (
+                <option key={profile.id} value={String(profile.id)}>
+                  {profile.profileName}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <TextField
+            label="SKU"
+            name="sku"
+            value={form.sku}
+            error={errors.sku}
+            disabled={isSubmitting}
+            placeholder="COFFEE-BLEND-200"
+            onChange={handleInputChange}
+          />
+          <TextField
+            label="중량(g)"
+            name="weightGrams"
+            type="number"
+            min={1}
+            value={form.weightGrams}
+            error={errors.weightGrams}
+            disabled={isSubmitting}
+            placeholder="200"
+            onChange={handleInputChange}
+          />
+
           <TextField
             label="상품명"
             name="name"
@@ -256,7 +308,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
             label="가격"
             name="price"
             type="number"
-            min={0}
+            min={1}
             value={form.price}
             error={errors.price}
             disabled={isSubmitting}
@@ -315,12 +367,14 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
                 초기화
               </Button>
             )}
-            <Button type="button" variant="outline" asChild>
-              <a href={form.image_url || "#"} target="_blank" rel="noreferrer">
-                <ImageIcon data-icon="inline-start" />
-                이미지 확인
-              </a>
-            </Button>
+            {form.image_url && (
+              <Button type="button" variant="outline" asChild>
+                <a href={form.image_url} target="_blank" rel="noreferrer">
+                  <ImageIcon data-icon="inline-start" />
+                  이미지 확인
+                </a>
+              </Button>
+            )}
           </div>
         </form>
       )}
@@ -391,6 +445,8 @@ function TextField({
 function validateProductForm(values: ProductFormState) {
   const errors: ProductFormErrors = {}
   const categoryId = Number(values.categoryId)
+  const coffeeProfileId = Number(values.coffeeProfileId)
+  const weightGrams = Number(values.weightGrams)
   const price = Number(values.price)
   const stockQuantity = Number(values.stockQuantity)
 
@@ -398,24 +454,31 @@ function validateProductForm(values: ProductFormState) {
     errors.categoryId = "카테고리를 선택해 주세요."
   }
 
+  if (
+    values.coffeeProfileId &&
+    (!Number.isInteger(coffeeProfileId) || coffeeProfileId <= 0)
+  ) {
+    errors.coffeeProfileId = "유효한 커피 프로필을 선택해 주세요."
+  }
+
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(values.sku.trim())) {
+    errors.sku = "SKU는 영문 대문자, 숫자, 하이픈, 밑줄만 사용할 수 있습니다."
+  }
+
+  if (!Number.isInteger(weightGrams) || weightGrams <= 0) {
+    errors.weightGrams = "중량은 1g 이상의 정수로 입력해 주세요."
+  }
+
   if (!values.name.trim()) {
     errors.name = "상품명을 입력해 주세요."
   }
 
-  if (!Number.isInteger(price) || price < 0) {
-    errors.price = "가격은 0 이상의 정수로 입력해 주세요."
+  if (!Number.isInteger(price) || price <= 0) {
+    errors.price = "가격은 1원 이상의 정수로 입력해 주세요."
   }
 
   if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
     errors.stockQuantity = "재고 수량은 0 이상의 정수로 입력해 주세요."
-  }
-
-  if (!values.description.trim()) {
-    errors.description = "상품 설명을 입력해 주세요."
-  }
-
-  if (!values.image_url.trim()) {
-    errors.image_url = "이미지 URL을 입력해 주세요."
   }
 
   return errors
@@ -424,6 +487,11 @@ function validateProductForm(values: ProductFormState) {
 function toProductRequest(values: ProductFormState): AdminProductRequest {
   return {
     categoryId: Number(values.categoryId),
+    coffeeProfileId: values.coffeeProfileId
+      ? Number(values.coffeeProfileId)
+      : null,
+    sku: values.sku.trim(),
+    weightGrams: Number(values.weightGrams),
     name: values.name.trim(),
     price: Number(values.price),
     stockQuantity: Number(values.stockQuantity),
@@ -436,11 +504,16 @@ function toProductRequest(values: ProductFormState): AdminProductRequest {
 function toFormState(product: ProductDetail): ProductFormState {
   return {
     categoryId: String(product.categoryId),
+    coffeeProfileId: product.coffeeProfile
+      ? String(product.coffeeProfile.id)
+      : "",
+    sku: product.sku,
+    weightGrams: String(product.weightGrams),
     name: product.name,
     price: String(product.price),
     stockQuantity: String(product.stockQuantity),
     roastLevel: product.roastLevel,
-    description: product.description,
+    description: product.description ?? "",
     image_url: product.imageUrl ?? "",
   }
 }

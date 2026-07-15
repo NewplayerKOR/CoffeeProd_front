@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Coffee,
   Mail,
+  Sparkles,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,12 @@ export default async function Home() {
             </Button>
             <Button variant="ghost" asChild>
               <Link href="/products">상품</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/recommendations">
+                <Sparkles data-icon="inline-start" />
+                추천
+              </Link>
             </Button>
             <Button variant="ghost" asChild>
               <Link href="/orders">주문</Link>
@@ -174,6 +181,14 @@ export default async function Home() {
                 <li>
                   <Link href="/products" className="hover:text-neutral-950">
                     상품 목록
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/recommendations"
+                    className="hover:text-neutral-950"
+                  >
+                    커피 추천
                   </Link>
                 </li>
                 <li>

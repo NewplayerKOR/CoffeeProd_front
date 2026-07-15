@@ -1,6 +1,7 @@
 import Link from "next/link"
 import {
   BarChart3,
+  Bean,
   Boxes,
   FolderTree,
   MessageCircle,
@@ -33,6 +34,12 @@ const adminLinks = [
     title: "카테고리 관리",
     description: "상품 카테고리를 생성하거나 이름을 수정합니다.",
     icon: FolderTree,
+  },
+  {
+    href: "/admin/coffee-catalog",
+    title: "커피 카탈로그",
+    description: "커피 프로필과 가공 방식, 향미, 추출 방식, 품종을 관리합니다.",
+    icon: Bean,
   },
   {
     href: "/admin/members",

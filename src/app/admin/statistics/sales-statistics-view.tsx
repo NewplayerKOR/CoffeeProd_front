@@ -5,7 +5,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 
 import { Button } from "@/components/ui/button"
 import {
-  aggregateSalesStatistics,
+  aggregateSalesStatisticsRange,
   getSalesStatistics,
   type SalesStatistics,
   type SalesStatisticsUnit,
@@ -21,15 +21,19 @@ export function SalesStatisticsView() {
   const [unit, setUnit] = useState<SalesStatisticsUnit>("DAILY")
   const [from, setFrom] = useState(thirtyDaysAgo)
   const [to, setTo] = useState(today)
-  const [aggregateDate, setAggregateDate] = useState(today)
+  const [aggregateFrom, setAggregateFrom] = useState(thirtyDaysAgo)
+  const [aggregateTo, setAggregateTo] = useState(today)
   const [statistics, setStatistics] = useState<SalesStatistics[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAggregating, setIsAggregating] = useState(false)
 
-  const loadStatistics = useCallback(async () => {
+  const loadStatistics = useCallback(async (showCompletion = false) => {
     try {
       setStatistics(await getSalesStatistics({ unit, from, to }))
+      if (showCompletion) {
+        setMessage("저장된 매출 통계를 최신 상태로 불러왔습니다.")
+      }
     } catch (error) {
       setMessage(getStatisticsErrorMessage(error))
     } finally {
@@ -84,7 +88,7 @@ export function SalesStatisticsView() {
   )
   const maxPaymentAmount = Math.max(...statistics.map((item) => item.paymentAmount), 1)
 
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
+  async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (from > to) {
@@ -92,18 +96,43 @@ export function SalesStatisticsView() {
       return
     }
 
-    void loadStatistics()
+    setIsLoading(true)
+    setMessage(null)
+    await loadStatistics(true)
   }
 
   async function handleAggregate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (aggregateFrom > aggregateTo) {
+      setMessage("재집계 시작일은 종료일보다 늦을 수 없습니다.")
+      return
+    }
+
+    if (getInclusiveDayCount(aggregateFrom, aggregateTo) > 366) {
+      setMessage("기간 재집계는 최대 366일까지 가능합니다.")
+      return
+    }
+
     setIsAggregating(true)
     setMessage(null)
 
     try {
-      await aggregateSalesStatistics(aggregateDate)
-      setMessage(`${aggregateDate} 매출을 재집계했습니다.`)
-      await loadStatistics()
+      const result = await aggregateSalesStatisticsRange(
+        aggregateFrom,
+        aggregateTo
+      )
+      const isCurrentRange = from === result.from && to === result.to
+
+      setMessage(
+        `${result.from}부터 ${result.to}까지 ${result.aggregatedDays.toLocaleString()}일의 매출을 재집계했습니다.`
+      )
+      setFrom(result.from)
+      setTo(result.to)
+
+      if (isCurrentRange) {
+        await loadStatistics()
+      }
     } catch (error) {
       setMessage(getStatisticsErrorMessage(error))
     } finally {
@@ -120,15 +149,32 @@ export function SalesStatisticsView() {
           <DateInput label="종료일" value={to} onChange={setTo} />
           <Button className="self-end" type="submit" disabled={isLoading}>
             <RefreshCw data-icon="inline-start" />
-            조회
+            {isLoading ? "조회 중" : "조회"}
           </Button>
         </form>
 
         <form className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm" onSubmit={handleAggregate}>
-          <DateInput label="수동 재집계 일자" value={aggregateDate} onChange={setAggregateDate} />
+          <div>
+            <h2 className="text-sm font-bold">기간 매출 재집계</h2>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">
+              시작일과 종료일을 포함해 최대 366일까지 다시 집계합니다.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <DateInput
+              label="시작일"
+              value={aggregateFrom}
+              onChange={setAggregateFrom}
+            />
+            <DateInput
+              label="종료일"
+              value={aggregateTo}
+              onChange={setAggregateTo}
+            />
+          </div>
           <Button type="submit" variant="outline" disabled={isAggregating}>
             <Calculator data-icon="inline-start" />
-            {isAggregating ? "집계 중" : "해당 일자 재집계"}
+            {isAggregating ? "기간 집계 중" : "선택 기간 재집계"}
           </Button>
         </form>
       </section>
@@ -234,6 +280,13 @@ function getLocalDateInputValue(date: Date) {
   const day = String(date.getDate()).padStart(2, "0")
 
   return `${year}-${month}-${day}`
+}
+
+function getInclusiveDayCount(from: string, to: string) {
+  const start = Date.parse(`${from}T00:00:00Z`)
+  const end = Date.parse(`${to}T00:00:00Z`)
+
+  return Math.floor((end - start) / 86_400_000) + 1
 }
 
 function getStatisticsErrorMessage(error: unknown) {

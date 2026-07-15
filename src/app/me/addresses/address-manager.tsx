@@ -1,19 +1,24 @@
 "use client"
 
 import Link from "next/link"
+import Script from "next/script"
 import {
   Check,
   Home,
   MapPin,
   Pencil,
   Plus,
+  Search,
   Trash2,
 } from "lucide-react"
 import {
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
+  type RefObject,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -40,6 +45,28 @@ type AddressField = keyof AddressRequest
 type AddressFormData = AddressRequest
 type FieldErrors = Partial<Record<AddressField, string>>
 
+type DaumPostcodeData = {
+  zonecode: string
+  userSelectedType: "R" | "J"
+  roadAddress: string
+  jibunAddress: string
+  bname: string
+  buildingName: string
+  apartment: "Y" | "N"
+}
+
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (options: {
+        oncomplete: (data: DaumPostcodeData) => void
+      }) => {
+        open: () => void
+      }
+    }
+  }
+}
+
 const emptyFormData: AddressFormData = {
   recipient: "",
   phone: "",
@@ -53,6 +80,7 @@ const inputClassName =
   "h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
 
 export function AddressManager() {
+  const detailAddressRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<AddressStatus>("checking")
   const [addresses, setAddresses] = useState<Address[]>([])
   const [formData, setFormData] = useState<AddressFormData>(emptyFormData)
@@ -62,6 +90,7 @@ export function AddressManager() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [messageTone, setMessageTone] = useState<"success" | "error">("success")
+  const [isPostcodeReady, setIsPostcodeReady] = useState(false)
 
   const editingAddress = useMemo(
     () => addresses.find((address) => address.id === editingAddressId) ?? null,
@@ -165,6 +194,60 @@ export function AddressManager() {
     setMessage(null)
   }
 
+  function handleAddressSearch() {
+    if (!window.daum?.Postcode) {
+      setMessageTone("error")
+      setMessage("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.")
+      return
+    }
+
+    const postcode = new window.daum.Postcode({
+      oncomplete(data) {
+        const baseAddress =
+          data.userSelectedType === "R" ? data.roadAddress : data.jibunAddress
+        const extraAddressParts = []
+
+        if (
+          data.userSelectedType === "R" &&
+          data.bname &&
+          /[동로가]$/u.test(data.bname)
+        ) {
+          extraAddressParts.push(data.bname)
+        }
+
+        if (
+          data.userSelectedType === "R" &&
+          data.buildingName &&
+          data.apartment === "Y"
+        ) {
+          extraAddressParts.push(data.buildingName)
+        }
+
+        const addressLine1 = extraAddressParts.length
+          ? `${baseAddress} (${extraAddressParts.join(", ")})`
+          : baseAddress
+
+        setFormData((current) => ({
+          ...current,
+          zipcode: data.zonecode,
+          addressLine1,
+        }))
+        setFieldErrors((current) => ({
+          ...current,
+          zipcode: undefined,
+          addressLine1: undefined,
+        }))
+        setMessage(null)
+
+        window.requestAnimationFrame(() => {
+          detailAddressRef.current?.focus()
+        })
+      },
+    })
+
+    postcode.open()
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -264,6 +347,17 @@ export function AddressManager() {
 
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-950">
+      <Script
+        id="daum-postcode-script"
+        src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        strategy="afterInteractive"
+        onReady={() => setIsPostcodeReady(true)}
+        onError={() => {
+          setIsPostcodeReady(false)
+          setMessageTone("error")
+          setMessage("주소 검색 서비스를 불러오지 못했습니다.")
+        }}
+      />
       <div className="mx-auto w-full max-w-6xl px-6 py-8">
         <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
@@ -466,18 +560,34 @@ export function AddressManager() {
                   label="우편번호"
                   name="zipcode"
                   value={formData.zipcode}
-                  placeholder="12345"
+                  placeholder="주소 검색으로 입력"
                   error={fieldErrors.zipcode}
                   disabled={!canAddAddress || isSubmitting}
+                  readOnly
+                  onClick={handleAddressSearch}
                   onChange={handleInputChange}
+                  action={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10"
+                      disabled={!canAddAddress || isSubmitting || !isPostcodeReady}
+                      onClick={handleAddressSearch}
+                    >
+                      <Search data-icon="inline-start" />
+                      주소 검색
+                    </Button>
+                  }
                 />
                 <AddressInput
                   label="주소"
                   name="addressLine1"
                   value={formData.addressLine1}
-                  placeholder="서울시 강남구 ..."
+                  placeholder="주소 검색 결과"
                   error={fieldErrors.addressLine1}
                   disabled={!canAddAddress || isSubmitting}
+                  readOnly
+                  onClick={handleAddressSearch}
                   onChange={handleInputChange}
                 />
                 <AddressInput
@@ -487,6 +597,7 @@ export function AddressManager() {
                   placeholder="101동 1001호"
                   error={fieldErrors.addressLine2}
                   disabled={!canAddAddress || isSubmitting}
+                  inputRef={detailAddressRef}
                   onChange={handleInputChange}
                 />
 
@@ -518,6 +629,10 @@ function AddressInput({
   placeholder,
   error,
   disabled,
+  readOnly = false,
+  inputRef,
+  action,
+  onClick,
   onChange,
 }: {
   label: string
@@ -526,6 +641,10 @@ function AddressInput({
   placeholder: string
   error?: string
   disabled: boolean
+  readOnly?: boolean
+  inputRef?: RefObject<HTMLInputElement | null>
+  action?: ReactNode
+  onClick?: () => void
   onChange: (event: ChangeEvent<HTMLInputElement>) => void
 }) {
   const inputId = `address-${name}`
@@ -536,18 +655,27 @@ function AddressInput({
       <label htmlFor={inputId} className="mb-2 block text-sm font-semibold">
         {label}
       </label>
-      <input
-        id={inputId}
-        name={name}
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        inputMode={name === "phone" || name === "zipcode" ? "numeric" : undefined}
-        className={inputClassName}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-        onChange={onChange}
-      />
+      <div className="flex gap-2">
+        <input
+          ref={inputRef}
+          id={inputId}
+          name={name}
+          value={value}
+          placeholder={placeholder}
+          disabled={disabled}
+          readOnly={readOnly}
+          inputMode={name === "phone" || name === "zipcode" ? "numeric" : undefined}
+          className={cn(
+            inputClassName,
+            readOnly && "cursor-pointer bg-neutral-50"
+          )}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          onClick={onClick}
+          onChange={onChange}
+        />
+        {action}
+      </div>
       {error && (
         <p id={errorId} className={fieldErrorClassName}>
           {error}

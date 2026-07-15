@@ -12,6 +12,7 @@ import {
   MapPin,
   Package,
   Pencil,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -486,6 +487,11 @@ export function MyPageView() {
             <aside className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold">바로가기</h2>
               <div className="mt-5 flex flex-col gap-2">
+                <QuickLink
+                  href="/me/coffee-preference"
+                  label="커피 취향 관리"
+                  icon={Sparkles}
+                />
                 <QuickLink href="/me/addresses" label="배송지 관리" icon={MapPin} />
                 <CartNavButton className="justify-start" />
                 <QuickLink href="/orders" label="주문 내역" icon={Package} />

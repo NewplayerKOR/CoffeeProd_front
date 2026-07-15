@@ -1,4 +1,5 @@
 import { apiRequest, type QueryParams } from "./client"
+import type { BeanType, CoffeeProfileSummary } from "./coffee"
 import type { PageResponse } from "./types"
 
 export type RoastLevel = "LIGHT" | "MEDIUM" | "DARK"
@@ -12,6 +13,10 @@ export type Category = {
 export type ProductListItem = {
   id: number
   categoryName: string
+  coffeeProfileId: number | null
+  coffeeProfileName: string | null
+  sku: string
+  weightGrams: number
   name: string
   price: number
   roastLevel: RoastLevel
@@ -21,12 +26,17 @@ export type ProductListItem = {
 
 export type ProductDetail = ProductListItem & {
   categoryId: number
+  coffeeProfile: CoffeeProfileSummary | null
   stockQuantity: number
-  description: string
+  description: string | null
 }
 
 export type ProductListParams = {
   categoryId?: number
+  coffeeProfileId?: number
+  processingMethodId?: number
+  beanType?: BeanType
+  decaf?: boolean
   roastLevel?: RoastLevel
   keyword?: string
   page?: number

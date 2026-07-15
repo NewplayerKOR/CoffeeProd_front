@@ -7,7 +7,7 @@ import type {
   RoastLevel,
 } from "./catalog"
 import type { Member, MemberGrade, MemberStatus } from "./auth"
-import type { OrderStatus } from "./order"
+import type { OrderDetail, OrderStatus } from "./order"
 import type { PageResponse } from "./types"
 
 export type AdminCategoryRequest = {
@@ -16,6 +16,9 @@ export type AdminCategoryRequest = {
 
 export type AdminProductRequest = {
   categoryId: number
+  coffeeProfileId: number | null
+  sku: string
+  weightGrams: number
   name: string
   price: number
   stockQuantity: number
@@ -131,7 +134,7 @@ export function updateAdminOrderStatus(
   orderId: number | string,
   payload: AdminOrderStatusRequest
 ) {
-  return apiRequest<AdminOrderListItem>(
+  return apiRequest<OrderDetail>(
     `/api/v1/admin/orders/${encodeURIComponent(orderId)}/status`,
     {
       method: "PATCH",

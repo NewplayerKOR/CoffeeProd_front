@@ -8,6 +8,7 @@ import {
   ReceiptText,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   UserRound,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -20,6 +21,12 @@ import {
 } from "@/lib/api/auth-token-storage"
 
 const userFeatureLinks = [
+  {
+    href: "/recommendations",
+    title: "취향 추천",
+    description: "로스팅과 향미 취향에 맞는 커피 상품을 추천받습니다.",
+    icon: Sparkles,
+  },
   {
     href: "/products",
     title: "상품 둘러보기",

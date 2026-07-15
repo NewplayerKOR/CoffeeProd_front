@@ -17,6 +17,13 @@ import {
   type ProductListParams,
   type RoastLevel,
 } from "@/lib/api/catalog"
+import {
+  getCoffeeProfile,
+  getProcessingMethods,
+  type BeanType,
+  type CoffeeProfile,
+  type CoffeeReference,
+} from "@/lib/api/coffee"
 import type { PageResponse } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +48,10 @@ const defaultSort = "createdAt,desc"
 
 type ProductsPageSearchParams = {
   categoryId?: string | string[]
+  coffeeProfileId?: string | string[]
+  processingMethodId?: string | string[]
+  beanType?: string | string[]
+  decaf?: string | string[]
   roastLevel?: string | string[]
   keyword?: string | string[]
   page?: string | string[]
@@ -54,6 +65,8 @@ type ProductsPageProps = {
 
 type ProductListState = {
   categories: Category[]
+  processingMethods: CoffeeReference[]
+  activeCoffeeProfile: CoffeeProfile | null
   products: PageResponse<ProductListItem> | null
   categoriesError: string | null
   productsError: string | null
@@ -98,6 +111,26 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 value={String(filters.categoryId)}
               />
             )}
+            {filters.coffeeProfileId !== undefined && (
+              <input
+                type="hidden"
+                name="coffeeProfileId"
+                value={String(filters.coffeeProfileId)}
+              />
+            )}
+            {filters.processingMethodId !== undefined && (
+              <input
+                type="hidden"
+                name="processingMethodId"
+                value={String(filters.processingMethodId)}
+              />
+            )}
+            {filters.beanType && (
+              <input type="hidden" name="beanType" value={filters.beanType} />
+            )}
+            {filters.decaf !== undefined && (
+              <input type="hidden" name="decaf" value={String(filters.decaf)} />
+            )}
             {filters.roastLevel && (
               <input
                 type="hidden"
@@ -126,6 +159,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <Button type="submit">검색</Button>
             {(filters.keyword ||
               filters.categoryId !== undefined ||
+              filters.coffeeProfileId !== undefined ||
+              filters.processingMethodId !== undefined ||
+              filters.beanType ||
+              filters.decaf !== undefined ||
               filters.roastLevel) && (
               <Button type="button" variant="outline" asChild>
                 <Link href={buildProductsHref({ sort: filters.sort })}>
@@ -164,6 +201,106 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {listState.categoriesError && (
             <p className="text-sm text-red-600">{listState.categoriesError}</p>
           )}
+
+          {filters.coffeeProfileId !== undefined && (
+            <FilterGroup label="커피 프로필">
+              <FilterLink
+                href={buildProductsHref(filters.urlParams, {
+                  coffeeProfileId: undefined,
+                  page: undefined,
+                })}
+                active={false}
+              >
+                {listState.activeCoffeeProfile?.profileName ??
+                  `프로필 #${filters.coffeeProfileId}`}
+                ×
+              </FilterLink>
+            </FilterGroup>
+          )}
+
+          <FilterGroup label="가공 방식">
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                processingMethodId: undefined,
+                page: undefined,
+              })}
+              active={filters.processingMethodId === undefined}
+            >
+              전체
+            </FilterLink>
+            {listState.processingMethods.map((method) => (
+              <FilterLink
+                key={method.id}
+                href={buildProductsHref(filters.urlParams, {
+                  processingMethodId: String(method.id),
+                  page: undefined,
+                })}
+                active={filters.processingMethodId === method.id}
+              >
+                {method.name}
+              </FilterLink>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup label="원두 구성">
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                beanType: undefined,
+                page: undefined,
+              })}
+              active={!filters.beanType}
+            >
+              전체
+            </FilterLink>
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                beanType: "SINGLE_ORIGIN",
+                page: undefined,
+              })}
+              active={filters.beanType === "SINGLE_ORIGIN"}
+            >
+              싱글 오리진
+            </FilterLink>
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                beanType: "BLEND",
+                page: undefined,
+              })}
+              active={filters.beanType === "BLEND"}
+            >
+              블렌드
+            </FilterLink>
+          </FilterGroup>
+
+          <FilterGroup label="디카페인">
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                decaf: undefined,
+                page: undefined,
+              })}
+              active={filters.decaf === undefined}
+            >
+              전체
+            </FilterLink>
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                decaf: "false",
+                page: undefined,
+              })}
+              active={filters.decaf === false}
+            >
+              일반 원두
+            </FilterLink>
+            <FilterLink
+              href={buildProductsHref(filters.urlParams, {
+                decaf: "true",
+                page: undefined,
+              })}
+              active={filters.decaf === true}
+            >
+              디카페인
+            </FilterLink>
+          </FilterGroup>
 
           <FilterGroup label="로스팅">
             <FilterLink
@@ -250,6 +387,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <h2 className="mobile-line-clamp-2 text-sm font-semibold leading-5 md:text-lg">
                   {product.name}
                 </h2>
+                <p className="mt-1 truncate text-xs text-neutral-500 md:text-sm">
+                  {product.coffeeProfileName || product.sku} · {product.weightGrams}g
+                </p>
 
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4 md:gap-3 md:pt-5">
                   <span className="text-sm font-bold md:text-base">
@@ -386,14 +526,25 @@ function FilterLink({
 async function loadProductList(
   params: ProductListParams
 ): Promise<ProductListState> {
-  const [categoriesResult, productsResult] = await Promise.allSettled([
+  const [categoriesResult, processingMethodsResult, profileResult, productsResult] =
+    await Promise.allSettled([
     getCategories(),
+    getProcessingMethods(),
+    params.coffeeProfileId
+      ? getCoffeeProfile(params.coffeeProfileId)
+      : Promise.resolve(null),
     getProducts(params),
   ])
 
   return {
     categories:
       categoriesResult.status === "fulfilled" ? categoriesResult.value : [],
+    processingMethods:
+      processingMethodsResult.status === "fulfilled"
+        ? processingMethodsResult.value
+        : [],
+    activeCoffeeProfile:
+      profileResult.status === "fulfilled" ? profileResult.value : null,
     products: productsResult.status === "fulfilled" ? productsResult.value : null,
     categoriesError:
       categoriesResult.status === "rejected"
@@ -408,6 +559,14 @@ async function loadProductList(
 
 function parseProductFilters(searchParams: ProductsPageSearchParams) {
   const categoryId = parsePositiveInteger(firstParam(searchParams.categoryId))
+  const coffeeProfileId = parsePositiveInteger(
+    firstParam(searchParams.coffeeProfileId)
+  )
+  const processingMethodId = parsePositiveInteger(
+    firstParam(searchParams.processingMethodId)
+  )
+  const beanType = parseBeanType(firstParam(searchParams.beanType))
+  const decaf = parseBoolean(firstParam(searchParams.decaf))
   const roastLevel = parseRoastLevel(firstParam(searchParams.roastLevel))
   const keyword = (firstParam(searchParams.keyword) ?? "").trim()
   const page = parseNonNegativeInteger(firstParam(searchParams.page)) ?? defaultPage
@@ -424,6 +583,22 @@ function parseProductFilters(searchParams: ProductsPageSearchParams) {
     apiParams.categoryId = categoryId
   }
 
+  if (coffeeProfileId !== undefined) {
+    apiParams.coffeeProfileId = coffeeProfileId
+  }
+
+  if (processingMethodId !== undefined) {
+    apiParams.processingMethodId = processingMethodId
+  }
+
+  if (beanType) {
+    apiParams.beanType = beanType
+  }
+
+  if (decaf !== undefined) {
+    apiParams.decaf = decaf
+  }
+
   if (roastLevel) {
     apiParams.roastLevel = roastLevel
   }
@@ -434,6 +609,12 @@ function parseProductFilters(searchParams: ProductsPageSearchParams) {
 
   const urlParams: Record<string, string | undefined> = {
     categoryId: categoryId === undefined ? undefined : String(categoryId),
+    coffeeProfileId:
+      coffeeProfileId === undefined ? undefined : String(coffeeProfileId),
+    processingMethodId:
+      processingMethodId === undefined ? undefined : String(processingMethodId),
+    beanType,
+    decaf: decaf === undefined ? undefined : String(decaf),
     roastLevel,
     keyword: keyword || undefined,
     page: page === defaultPage ? undefined : String(page),
@@ -445,12 +626,32 @@ function parseProductFilters(searchParams: ProductsPageSearchParams) {
     apiParams,
     urlParams,
     categoryId,
+    coffeeProfileId,
+    processingMethodId,
+    beanType,
+    decaf,
     roastLevel,
     keyword,
     page,
     size,
     sort,
   }
+}
+
+function parseBeanType(value: string | undefined): BeanType | undefined {
+  return value === "SINGLE_ORIGIN" || value === "BLEND" ? value : undefined
+}
+
+function parseBoolean(value: string | undefined) {
+  if (value === "true") {
+    return true
+  }
+
+  if (value === "false") {
+    return false
+  }
+
+  return undefined
 }
 
 function buildProductsHref(

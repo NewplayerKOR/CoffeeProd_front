@@ -17,15 +17,25 @@ export type SalesStatisticsParams = {
   to: string
 }
 
+export type AggregateSalesRangeResponse = {
+  from: string
+  to: string
+  aggregatedDays: number
+}
+
 export function getSalesStatistics(params: SalesStatisticsParams) {
   return apiRequest<SalesStatistics[]>("/api/v1/admin/statistics/sales", {
+    cache: "no-store",
     query: params as QueryParams,
   })
 }
 
-export function aggregateSalesStatistics(statDate: string) {
-  return apiRequest<null>("/api/v1/admin/statistics/sales/aggregate", {
+export function aggregateSalesStatisticsRange(from: string, to: string) {
+  return apiRequest<AggregateSalesRangeResponse>(
+    "/api/v1/admin/statistics/sales/aggregate/range",
+    {
     method: "POST",
-    query: { statDate },
-  })
+      query: { from, to },
+    }
+  )
 }

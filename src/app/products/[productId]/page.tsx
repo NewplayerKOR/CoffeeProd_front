@@ -15,7 +15,9 @@ import {
   type ProductStatus,
   type RoastLevel,
 } from "@/lib/api/catalog"
+import type { CoffeeProfileSummary } from "@/lib/api/coffee"
 import { ApiError } from "@/lib/api/types"
+import { getBeanTypeLabel } from "@/lib/coffee-display"
 import {
   DELIVERY_BASE_FEE,
   DELIVERY_FREE_THRESHOLD,
@@ -126,12 +128,23 @@ export default async function ProductDetailPage({
 
           <h1 className="mt-4 text-3xl font-bold">{product.name}</h1>
 
+          {product.coffeeProfile && (
+            <Link
+              href={`/coffee-profiles/${product.coffeeProfile.id}`}
+              className="mt-2 inline-flex text-sm font-medium text-neutral-500 hover:text-neutral-950"
+            >
+              {product.coffeeProfile.profileName} 프로필 보기
+            </Link>
+          )}
+
           <p className="mt-4 leading-7 text-neutral-600">
             {product.description}
           </p>
 
           <div className="mt-6 grid gap-4 border-y border-neutral-200 py-5">
             <ProductInfoRow label="상품 번호" value={String(product.id)} />
+            <ProductInfoRow label="SKU" value={product.sku} />
+            <ProductInfoRow label="중량" value={`${product.weightGrams}g`} />
             <ProductInfoRow label="카테고리" value={product.categoryName} />
             <ProductInfoRow
               label="로스팅"
@@ -311,10 +324,52 @@ function ProductDetailTab({
       <p className="mt-4 leading-7 text-neutral-600">{product.description}</p>
       <dl className="mt-6 grid gap-4 rounded-lg border border-neutral-200 p-5 text-sm md:grid-cols-2">
         <ProductSpec label="상품명" value={product.name} />
+        <ProductSpec label="SKU" value={product.sku} />
+        <ProductSpec label="중량" value={`${product.weightGrams}g`} />
         <ProductSpec label="카테고리" value={product.categoryName} />
         <ProductSpec label="로스팅" value={getRoastLevelLabel(product.roastLevel)} />
         <ProductSpec label="상태" value={getStatusLabel(product.status)} />
       </dl>
+      {product.coffeeProfile && (
+        <ProductCoffeeProfile profile={product.coffeeProfile} />
+      )}
+    </section>
+  )
+}
+
+function ProductCoffeeProfile({ profile }: { profile: CoffeeProfileSummary }) {
+  return (
+    <section className="mt-8 border-t border-neutral-200 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-neutral-500">Coffee Profile</p>
+          <h3 className="mt-1 text-lg font-bold">{profile.profileName}</h3>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/coffee-profiles/${profile.id}`}>전체 프로필 보기</Link>
+        </Button>
+      </div>
+      <p className="mt-4 text-sm leading-6 text-neutral-600">
+        {profile.summary || `${getBeanTypeLabel(profile.beanType)} 커피 프로필입니다.`}
+      </p>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ProductSpec label="산미" value={`${profile.acidity} / 5`} />
+        <ProductSpec label="바디" value={`${profile.body} / 5`} />
+        <ProductSpec label="단맛" value={`${profile.sweetness} / 5`} />
+        <ProductSpec label="향" value={`${profile.aroma} / 5`} />
+      </dl>
+      {profile.flavorNotes.length > 0 && (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {profile.flavorNotes.map((note) => (
+            <span
+              key={note.flavorNoteId}
+              className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600"
+            >
+              {note.name} {note.intensity}/5
+            </span>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
