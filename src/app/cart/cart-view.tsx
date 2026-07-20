@@ -2,17 +2,17 @@
 
 import Link from "next/link"
 import {
-  ArrowLeft,
   Minus,
   Plus,
-  ShoppingBag,
   ShoppingCart,
   Trash2,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { ProductImage } from "@/app/products/product-image"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   clearCart,
   deleteCartItem,
@@ -25,7 +25,6 @@ import {
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { ApiError } from "@/lib/api/types"
 import { calculateEstimatedDeliveryFee } from "@/lib/order-pricing"
-import { ProductImage } from "@/app/products/product-image"
 
 const emptyCart: Cart = {
   items: [],
@@ -165,28 +164,13 @@ export function CartView() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <ShoppingBag className="size-5" />
-            CoffeeProd
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="outline" asChild>
-              <Link href="/products">
-                <ArrowLeft data-icon="inline-start" />
-                쇼핑 계속하기
-              </Link>
-            </Button>
-          </div>
-        </header>
+    <main className="cart-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Cart</p>
-          <h1 className="mt-2 text-3xl font-bold">장바구니</h1>
+          <p className="editorial-kicker">Cart</p>
+          <h1 className="mt-3 text-4xl font-bold">장바구니</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             담은 상품의 수량과 분쇄 옵션을 확인하고 주문으로 이어갑니다.
           </p>
@@ -403,6 +387,7 @@ export function CartView() {
           </section>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

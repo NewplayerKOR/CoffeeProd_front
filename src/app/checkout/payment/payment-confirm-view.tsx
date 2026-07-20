@@ -200,7 +200,7 @@ export function PaymentConfirmView({
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
+    <main className="order-page min-h-screen bg-neutral-50 text-neutral-950">
       <Script
         src={TOSS_SDK_URL}
         strategy="afterInteractive"

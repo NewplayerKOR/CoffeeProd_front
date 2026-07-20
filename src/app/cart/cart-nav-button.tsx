@@ -15,9 +15,10 @@ type CartChangedEventDetail = {
 
 type CartNavButtonProps = {
   className?: string
+  iconOnly?: boolean
 }
 
-export function CartNavButton({ className }: CartNavButtonProps) {
+export function CartNavButton({ className, iconOnly = false }: CartNavButtonProps) {
   const [totalQuantity, setTotalQuantity] = useState(0)
 
   useEffect(() => {
@@ -64,10 +65,15 @@ export function CartNavButton({ className }: CartNavButtonProps) {
   }, [])
 
   return (
-    <Button variant="outline" className={cn("relative", className)} asChild>
+    <Button
+      variant={iconOnly ? "ghost" : "outline"}
+      size={iconOnly ? "icon" : "default"}
+      className={cn("relative", className)}
+      asChild
+    >
       <Link href="/cart">
         <ShoppingCart data-icon="inline-start" />
-        장바구니
+        {iconOnly ? <span className="sr-only">장바구니</span> : "장바구니"}
         {totalQuantity > 0 && (
           <span
             className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold leading-none text-white"

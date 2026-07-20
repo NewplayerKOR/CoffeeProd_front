@@ -16,6 +16,7 @@ import { ProductImage } from "./products/product-image"
 
 export type HomeSlide = {
   id: string
+  eyebrow: string
   title: string
   description: string
   href: string
@@ -110,10 +111,10 @@ export function HomeSlider({ slides }: HomeSliderProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
-      <div className="grid md:h-[460px] md:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)] lg:h-[500px]">
+    <section className="journal-slider">
+      <div className="journal-slider-layout">
         <div
-          className="relative aspect-[16/10] cursor-grab bg-neutral-50 active:cursor-grabbing md:aspect-auto md:h-full"
+          className="journal-slider-media"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
@@ -130,16 +131,16 @@ export function HomeSlider({ slides }: HomeSliderProps) {
               key={activeSlide.id}
               src={activeSlide.imageUrl}
               alt={activeSlide.title}
-              className="object-contain"
+              className="journal-slider-image"
             />
           </Link>
           {safeSlides.length > 1 && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-between px-4">
+            <div className="journal-slider-overlay-controls">
               <Button
                 type="button"
                 size="icon"
                 variant="outline"
-                className="pointer-events-auto bg-white/90"
+                className="pointer-events-auto"
                 onPointerDown={(event) => event.stopPropagation()}
                 onPointerUp={(event) => event.stopPropagation()}
                 onClick={(event) => handleControlClick(event, -1)}
@@ -151,7 +152,7 @@ export function HomeSlider({ slides }: HomeSliderProps) {
                 type="button"
                 size="icon"
                 variant="outline"
-                className="pointer-events-auto bg-white/90"
+                className="pointer-events-auto"
                 onPointerDown={(event) => event.stopPropagation()}
                 onPointerUp={(event) => event.stopPropagation()}
                 onClick={(event) => handleControlClick(event, 1)}
@@ -163,26 +164,26 @@ export function HomeSlider({ slides }: HomeSliderProps) {
           )}
         </div>
 
-        <div className="flex flex-col justify-between gap-6 p-6">
+        <div className="journal-slider-copy">
           <div>
-            <p className="text-sm font-medium text-neutral-500">Notice</p>
-            <h2 className="mt-3 line-clamp-2 min-h-16 text-2xl font-bold">
+            <p className="editorial-kicker">{activeSlide.eyebrow}</p>
+            <h3>
               {activeSlide.title}
-            </h2>
-            <p className="mt-3 line-clamp-3 min-h-[72px] text-sm leading-6 text-neutral-600">
+            </h3>
+            <p className="journal-slider-description">
               {activeSlide.description}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button asChild>
+          <div className="journal-slider-footer">
+            <Button variant="outline" asChild>
               <Link href={activeSlide.href}>
                 {activeSlide.ctaLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
 
-            <div className="flex items-center gap-2">
+            <div className="journal-slider-counter">
               <Button
                 type="button"
                 size="icon"
@@ -192,7 +193,7 @@ export function HomeSlider({ slides }: HomeSliderProps) {
               >
                 <ArrowLeft />
               </Button>
-              <span className="min-w-12 text-center text-sm text-neutral-500">
+              <span>
                 {activeIndex + 1} / {safeSlides.length}
               </span>
               <Button
@@ -215,6 +216,7 @@ export function HomeSlider({ slides }: HomeSliderProps) {
 const fallbackSlides: HomeSlide[] = [
   {
     id: "event-shipping",
+    eyebrow: "Membership",
     title: "신규 회원 첫 주문 혜택",
     description: "회원가입 후 배송지와 장바구니를 준비하고 첫 주문 플로우를 확인하세요.",
     href: "/signup",

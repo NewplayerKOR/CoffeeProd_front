@@ -2,13 +2,13 @@ import Link from "next/link"
 import {
   ArrowLeft,
   ArrowRight,
-  Coffee,
   Search,
   SlidersHorizontal,
 } from "lucide-react"
 
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   getCategories,
   getProducts,
@@ -27,7 +27,6 @@ import {
 import type { PageResponse } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
-import { CartNavButton } from "../cart/cart-nav-button"
 import { ProductImage } from "./product-image"
 
 const roastLevelOptions = [
@@ -79,30 +78,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const products = listState.products?.content ?? []
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-          </div>
-        </header>
-
-        <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Products</p>
-          <h1 className="mt-2 text-3xl font-bold">상품 목록</h1>
+    <main className="catalog-page min-h-screen bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
+        <section className="catalog-intro mb-10">
+          <p className="editorial-kicker">Coffee collection</p>
+          <h1 className="mt-3 text-4xl font-bold">오늘의 원두를 고르세요</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-            백엔드 상품 API 기준으로 카테고리, 로스팅 강도, 검색어, 정렬,
-            페이지네이션을 URL에 유지합니다.
+            원산지와 가공 방식, 로스팅과 향의 균형을 비교해 나에게 맞는
+            커피를 발견해 보세요.
           </p>
         </section>
 
-        <section className="mb-8 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+        <section className="catalog-search mb-8 border-y border-neutral-200 py-5">
           <form action="/products" className="flex flex-col gap-3 md:flex-row">
             {filters.categoryId !== undefined && (
               <input
@@ -173,7 +161,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </form>
         </section>
 
-        <section className="mb-6 flex flex-col gap-4">
+        <details className="catalog-filters mb-8 border-b border-neutral-200 pb-6">
+          <summary>
+            <span>
+              <SlidersHorizontal />
+              필터 및 정렬
+            </span>
+            <span>열기</span>
+          </summary>
+          <div className="catalog-filter-content flex flex-col gap-4">
           <FilterGroup label="카테고리">
             <FilterLink
               href={buildProductsHref(filters.urlParams, {
@@ -326,21 +322,22 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             ))}
           </FilterGroup>
 
-          <FilterGroup label="정렬">
-            {sortOptions.map((option) => (
-              <FilterLink
-                key={option.value}
-                href={buildProductsHref(filters.urlParams, {
-                  sort: option.value,
-                  page: undefined,
-                })}
-                active={filters.sort === option.value}
-              >
-                {option.label}
-              </FilterLink>
-            ))}
-          </FilterGroup>
-        </section>
+            <FilterGroup label="정렬">
+              {sortOptions.map((option) => (
+                <FilterLink
+                  key={option.value}
+                  href={buildProductsHref(filters.urlParams, {
+                    sort: option.value,
+                    page: undefined,
+                  })}
+                  active={filters.sort === option.value}
+                >
+                  {option.label}
+                </FilterLink>
+              ))}
+            </FilterGroup>
+          </div>
+        </details>
 
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
@@ -363,12 +360,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </div>
         )}
 
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <section className="catalog-grid grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
           {products.map((product) => (
             <Link
               key={product.id}
               href={`/products/${product.id}`}
-              className="group overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm transition-colors hover:border-neutral-950"
+              className="catalog-card group overflow-hidden border-b border-neutral-200 bg-white transition-colors hover:border-neutral-950"
             >
               <div className="aspect-square bg-neutral-100 md:aspect-[4/3]">
                 <ProductImage src={product.imageUrl} alt={product.name} />
@@ -480,6 +477,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </nav>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

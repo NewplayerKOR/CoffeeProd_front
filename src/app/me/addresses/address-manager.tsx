@@ -4,7 +4,6 @@ import Link from "next/link"
 import Script from "next/script"
 import {
   Check,
-  Home,
   MapPin,
   Pencil,
   Plus,
@@ -22,8 +21,9 @@ import {
   useState,
 } from "react"
 
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   createAddress,
   deleteAddress,
@@ -37,8 +37,6 @@ import {
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
-
-import { CartNavButton } from "../../cart/cart-nav-button"
 
 type AddressStatus = "checking" | "guest" | "ready"
 type AddressField = keyof AddressRequest
@@ -346,7 +344,7 @@ export function AddressManager() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
+    <main className="account-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <Script
         id="daum-postcode-script"
         src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
@@ -358,22 +356,12 @@ export function AddressManager() {
           setMessage("주소 검색 서비스를 불러오지 못했습니다.")
         }}
       />
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Home className="size-5" />
-            CoffeeProd
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-          </div>
-        </header>
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Addresses</p>
-          <h1 className="mt-2 text-3xl font-bold">배송지 관리</h1>
+          <p className="editorial-kicker">Addresses</p>
+          <h1 className="mt-3 text-4xl font-bold">배송지 관리</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             주문에 사용할 배송지를 등록하고 기본 배송지를 지정합니다.
           </p>
@@ -618,6 +606,7 @@ export function AddressManager() {
           </section>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

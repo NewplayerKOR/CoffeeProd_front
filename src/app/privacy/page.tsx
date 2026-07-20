@@ -1,32 +1,14 @@
-import Link from "next/link"
-import { ArrowLeft, Coffee } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-neutral-50 px-6 py-8 text-neutral-950">
-      <div className="mx-auto w-full max-w-3xl">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="outline" asChild>
-              <Link href="/">
-                <ArrowLeft data-icon="inline-start" />
-                메인으로
-              </Link>
-            </Button>
-          </div>
-        </header>
-
-        <article className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-neutral-500">Privacy</p>
-          <h1 className="mt-2 text-3xl font-bold">개인정보처리방침</h1>
+    <main className="legal-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[860px] flex-1 px-6 py-14">
+        <article>
+          <p className="editorial-kicker">Privacy</p>
+          <h1 className="mt-3 text-4xl font-bold">개인정보처리방침</h1>
           <p className="mt-4 text-sm leading-6 text-neutral-600">
             본 문서는 CoffeeProd 예제 서비스의 개인정보 처리 방식을 설명하기
             위한 샘플 문서입니다.
@@ -60,6 +42,7 @@ export default function PrivacyPage() {
           </section>
         </article>
       </div>
+      <SiteFooter />
     </main>
   )
 }

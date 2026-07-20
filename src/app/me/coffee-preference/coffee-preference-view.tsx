@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, Coffee, Save, Sparkles, UserRound } from "lucide-react"
+import { Save, Sparkles, UserRound } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 
 import {
@@ -10,7 +10,8 @@ import {
   type CoffeePreferenceFormState,
 } from "@/components/coffee-preference-fields"
 import { CoffeeRecommendationResults } from "@/components/coffee-recommendation-results"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
@@ -28,8 +29,6 @@ import {
   hasCoffeePreference,
   toCoffeePreferencePayload,
 } from "@/lib/coffee-preference"
-
-import { CartNavButton } from "../../cart/cart-nav-button"
 
 type PageStatus = "checking" | "guest" | "ready"
 
@@ -139,28 +138,13 @@ export function CoffeePreferenceView() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/me">
-                <ArrowLeft data-icon="inline-start" />
-                마이페이지
-              </Link>
-            </Button>
-          </div>
-        </header>
+    <main className="account-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">My Coffee</p>
-          <h1 className="mt-2 text-3xl font-bold">내 커피 취향</h1>
+          <p className="editorial-kicker">My Coffee</p>
+          <h1 className="mt-3 text-4xl font-bold">내 커피 취향</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             자주 찾는 커피의 기준을 저장하면 판매 가능한 상품을 같은 기준으로
             다시 추천받을 수 있습니다.
@@ -256,6 +240,7 @@ export function CoffeePreferenceView() {
           </div>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

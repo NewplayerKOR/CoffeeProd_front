@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 
-const fallbackImageSrc = "/images/product-fallback.svg"
+const fallbackImageSrc = "/images/product-fallback.webp"
 
 type ProductImageProps = {
   src: string | null
@@ -25,7 +25,7 @@ export function ProductImage({ src, alt, className }: ProductImageProps) {
       className={cn("h-full w-full object-cover object-center", className)}
       draggable={false}
       loading="lazy"
-      unoptimized
+      unoptimized={imageSrc !== fallbackImageSrc}
       onError={() => {
         if (imageSrc !== fallbackImageSrc) {
           setImageSrc(fallbackImageSrc)

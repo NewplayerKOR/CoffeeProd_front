@@ -22,11 +22,11 @@ export function PasswordChangedRedirect() {
   }, [router])
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 text-neutral-950">
+    <main className="auth-page flex min-h-screen items-center justify-center bg-neutral-50 px-6 text-neutral-950">
       <div className="fixed right-4 top-4 z-10">
         <ThemeToggle />
       </div>
-      <section className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
+      <section className="auth-panel w-full max-w-md rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-50">
           <CheckCircle2 className="size-6 text-green-700" />
         </div>

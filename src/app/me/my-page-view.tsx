@@ -4,9 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   AlertTriangle,
-  ArrowLeft,
   CheckCircle2,
-  Home,
   KeyRound,
   LogOut,
   MapPin,
@@ -25,8 +23,9 @@ import {
   useState,
 } from "react"
 
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { getMe, type Member, type MemberGrade, type MemberStatus } from "@/lib/api/auth"
 import {
   clearStoredAuthTokens,
@@ -254,28 +253,13 @@ export function MyPageView() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Home className="size-5" />
-            CoffeeProd
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="outline" asChild>
-              <Link href="/">
-                <ArrowLeft data-icon="inline-start" />
-                메인으로
-              </Link>
-            </Button>
-          </div>
-        </header>
+    <main className="account-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">My Page</p>
-          <h1 className="mt-2 text-3xl font-bold">마이페이지</h1>
+          <p className="editorial-kicker">My account</p>
+          <h1 className="mt-3 text-4xl font-bold">나의 CoffeeProd</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             내 정보와 계정 설정, 배송지와 주문 관련 메뉴를 관리합니다.
           </p>
@@ -500,6 +484,8 @@ export function MyPageView() {
           </section>
         )}
       </div>
+
+      <SiteFooter />
 
       {withdrawDialog === "confirm" && (
         <WithdrawConfirmDialog

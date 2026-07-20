@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Coffee, RotateCcw, Save, Sparkles } from "lucide-react"
+import { RotateCcw, Save, Sparkles } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 
 import {
@@ -10,7 +10,8 @@ import {
   type CoffeePreferenceFormState,
 } from "@/components/coffee-preference-fields"
 import { CoffeeRecommendationResults } from "@/components/coffee-recommendation-results"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
@@ -25,8 +26,6 @@ import {
   hasCoffeePreference,
   toCoffeePreferencePayload,
 } from "@/lib/coffee-preference"
-
-import { CartNavButton } from "../cart/cart-nav-button"
 
 export function RecommendationsView() {
   const [form, setForm] = useState<CoffeePreferenceFormState>(
@@ -111,31 +110,21 @@ export function RecommendationsView() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-          </div>
-        </header>
-
-        <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Taste Finder</p>
-          <h1 className="mt-2 text-3xl font-bold">내 취향에 맞는 커피 찾기</h1>
+    <main className="recommendations-page min-h-screen bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
+        <section className="mb-10">
+          <p className="editorial-kicker">Taste Finder</p>
+          <h1 className="mt-3 text-4xl font-bold">내 취향에 맞는 커피 찾기</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             원하는 로스팅과 향미 강도를 선택하면 현재 판매 가능한 원두 중
             가까운 상품을 추천합니다.
           </p>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <section className="recommendation-layout grid gap-8 lg:grid-cols-[390px_minmax(0,1fr)]">
           <form
-            className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
+            className="recommendation-form h-fit border-y border-neutral-200 bg-white py-6"
             onSubmit={handleSubmit}
           >
             <div className="flex items-center gap-2">
@@ -216,6 +205,7 @@ export function RecommendationsView() {
           </div>
         </section>
       </div>
+      <SiteFooter />
     </main>
   )
 }

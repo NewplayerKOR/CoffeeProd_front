@@ -1,8 +1,8 @@
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, Coffee, Sparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react"
 
-import { CartNavButton } from "@/app/cart/cart-nav-button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import {
   getBrewMethods,
@@ -27,23 +27,13 @@ export default async function CoffeeProfilesPage({
   const result = await loadProfiles(page)
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-          </div>
-        </header>
-
-        <section className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <main className="profiles-page min-h-screen bg-neutral-50 text-neutral-950">
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
+        <section className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-medium text-neutral-500">Coffee Profiles</p>
-            <h1 className="mt-2 text-3xl font-bold">커피 프로필</h1>
+            <p className="editorial-kicker">Coffee Profiles</p>
+            <h1 className="mt-3 text-4xl font-bold">커피를 이해하는 기준</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
               원산지와 가공 방식, 향미와 추천 추출법으로 CoffeeProd의 원두
               기준을 살펴봅니다.
@@ -76,12 +66,12 @@ export default async function CoffeeProfilesPage({
           </p>
         ) : (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="profile-card-grid grid gap-px border-y border-neutral-200 bg-neutral-200 sm:grid-cols-2 lg:grid-cols-3">
               {result.data?.content.map((profile) => (
                 <Link
                   key={profile.id}
                   href={`/coffee-profiles/${profile.id}`}
-                  className="group flex min-h-64 flex-col rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-colors hover:border-neutral-950"
+                  className="group flex min-h-64 flex-col bg-white p-6 transition-colors hover:bg-neutral-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
@@ -151,6 +141,7 @@ export default async function CoffeeProfilesPage({
           </>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

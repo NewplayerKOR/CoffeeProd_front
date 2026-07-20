@@ -1,14 +1,14 @@
 import Link from "next/link"
 import {
   ArrowLeft,
-  Coffee,
   PackageCheck,
   PackageX,
   Truck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import {
   getProduct,
   type ProductDetail,
@@ -24,7 +24,6 @@ import {
 } from "@/lib/order-pricing"
 import { cn } from "@/lib/utils"
 
-import { CartNavButton } from "../../cart/cart-nav-button"
 import { ProductImage } from "../product-image"
 import { ProductQnas, ProductReviews } from "./product-community"
 import { ProductPurchaseForm } from "./product-purchase-form"
@@ -214,21 +213,11 @@ export default async function ProductDetailPage({
 function ProductDetailShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <CartNavButton />
-          </div>
-        </header>
-
+      <SiteHeader />
+      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
         {children}
       </div>
+      <SiteFooter />
     </main>
   )
 }

@@ -20,12 +20,12 @@ export function CoffeeRecommendationResults({
   }
 
   return (
-    <section className="grid gap-4 md:grid-cols-2">
+    <section className="recommendation-results grid gap-px border-y border-neutral-200 bg-neutral-200 md:grid-cols-2">
       {recommendations.map((item) => (
         <Link
           key={item.productId}
           href={`/products/${item.productId}`}
-          className="group overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm transition-colors hover:border-neutral-950"
+          className="recommendation-card group overflow-hidden bg-white transition-colors"
         >
           <ProductImage
             src={item.imageUrl}

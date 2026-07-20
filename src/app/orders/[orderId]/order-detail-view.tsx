@@ -99,7 +99,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
+    <main className="order-page min-h-screen bg-neutral-50 text-neutral-950">
       <div className="mx-auto w-full max-w-6xl px-6 py-8">
         <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">

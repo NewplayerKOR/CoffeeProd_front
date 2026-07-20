@@ -15,8 +15,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "CoffeeProd",
-  description: "Coffee commerce frontend",
+  title: {
+    default: "CoffeeProd",
+    template: "%s | CoffeeProd",
+  },
+  description: "취향을 기록하고 오래 기억할 한 잔을 발견하는 커피 커머스",
 }
 
 export default function RootLayout({
