@@ -1,4 +1,8 @@
-import { apiRequest, type QueryParams } from "./client"
+import {
+  apiRequest,
+  type ApiCacheOptions,
+  type QueryParams,
+} from "./client"
 import type { BeanType, CoffeeProfileSummary } from "./coffee"
 import type { PageResponse } from "./types"
 
@@ -44,33 +48,46 @@ export type ProductListParams = {
   sort?: string
 }
 
-export function getCategories() {
+export function getCategories(cacheOptions: ApiCacheOptions = {}) {
   return apiRequest<Category[]>("/api/v1/categories", {
     auth: false,
+    ...cacheOptions,
   })
 }
 
-export function getCategory(categoryId: number | string) {
+export function getCategory(
+  categoryId: number | string,
+  cacheOptions: ApiCacheOptions = {}
+) {
   return apiRequest<Category>(
     `/api/v1/categories/${encodeURIComponent(categoryId)}`,
     {
       auth: false,
+      ...cacheOptions,
     }
   )
 }
 
-export function getProducts(params: ProductListParams = {}) {
+export function getProducts(
+  params: ProductListParams = {},
+  cacheOptions: ApiCacheOptions = {}
+) {
   return apiRequest<PageResponse<ProductListItem>>("/api/v1/products", {
     auth: false,
     query: params as QueryParams,
+    ...cacheOptions,
   })
 }
 
-export function getProduct(productId: number | string) {
+export function getProduct(
+  productId: number | string,
+  cacheOptions: ApiCacheOptions = {}
+) {
   return apiRequest<ProductDetail>(
     `/api/v1/products/${encodeURIComponent(productId)}`,
     {
       auth: false,
+      ...cacheOptions,
     }
   )
 }

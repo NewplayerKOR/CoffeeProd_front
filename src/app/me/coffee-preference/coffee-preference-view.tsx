@@ -17,7 +17,6 @@ import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
   getMyCoffeePreference,
   getMyCoffeeRecommendations,
-  getProcessingMethods,
   saveMyCoffeePreference,
   type CoffeeRecommendation,
   type CoffeeReference,
@@ -32,7 +31,13 @@ import {
 
 type PageStatus = "checking" | "guest" | "ready"
 
-export function CoffeePreferenceView() {
+export function CoffeePreferenceView({
+  initialProcessingMethods,
+  initialReferenceError,
+}: {
+  initialProcessingMethods: CoffeeReference[]
+  initialReferenceError: string | null
+}) {
   const [status, setStatus] = useState<PageStatus>("checking")
   const [form, setForm] = useState<CoffeePreferenceFormState>(
     emptyCoffeePreferenceForm
@@ -40,14 +45,11 @@ export function CoffeePreferenceView() {
   const [preference, setPreference] = useState<MemberCoffeePreference | null>(
     null
   )
-  const [processingMethods, setProcessingMethods] = useState<CoffeeReference[]>(
-    []
-  )
   const [recommendations, setRecommendations] = useState<
     CoffeeRecommendation[]
   >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(initialReferenceError)
   const [messageTone, setMessageTone] = useState<"success" | "error">(
     "success"
   )
@@ -68,16 +70,14 @@ export function CoffeePreferenceView() {
     }
 
     Promise.all([
-      getProcessingMethods(),
       getMyCoffeePreference().catch(allowNotFound),
       getMyCoffeeRecommendations(6).catch(allowRecommendationNotFound),
     ])
-      .then(([methods, savedPreference, savedRecommendations]) => {
+      .then(([savedPreference, savedRecommendations]) => {
         if (!isActive) {
           return
         }
 
-        setProcessingMethods(methods)
         setPreference(savedPreference)
         setRecommendations(savedRecommendations)
 
@@ -192,7 +192,7 @@ export function CoffeePreferenceView() {
               <div className="mt-5">
                 <CoffeePreferenceFields
                   value={form}
-                  processingMethods={processingMethods}
+                  processingMethods={initialProcessingMethods}
                   disabled={isSubmitting}
                   onChange={(nextForm) => {
                     setForm(nextForm)

@@ -72,7 +72,10 @@ export function ProductPurchaseForm({
       const updatedCart = await addCartItem(cartItemDraft)
       window.dispatchEvent(
         new CustomEvent(CART_CHANGED_EVENT, {
-          detail: { totalQuantity: updatedCart.totalQuantity },
+          detail: {
+            cart: updatedCart,
+            totalQuantity: updatedCart.totalQuantity,
+          },
         })
       )
       setMessageTone("success")

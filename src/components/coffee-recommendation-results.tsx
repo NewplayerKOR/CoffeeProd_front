@@ -31,6 +31,7 @@ export function CoffeeRecommendationResults({
             src={item.imageUrl}
             alt={item.name}
             className="aspect-[16/9] w-full object-cover"
+            sizes="(max-width: 767px) 100vw, 50vw"
           />
           <div className="p-5">
             <div className="flex items-start justify-between gap-4">

@@ -149,7 +149,9 @@ export default async function CoffeeProfileDetailPage({
 
 async function loadProfile(coffeeProfileId: string) {
   try {
-    return await getCoffeeProfile(coffeeProfileId)
+    return await getCoffeeProfile(coffeeProfileId, {
+      next: { revalidate: 60, tags: ["coffee-profiles"] },
+    })
   } catch (error) {
     if (error instanceof ApiError && error.httpStatus === 404) {
       notFound()

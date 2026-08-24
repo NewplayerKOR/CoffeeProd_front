@@ -13,12 +13,8 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { useSessionState } from "@/components/session-state-provider"
 import { getAdminMembers } from "@/lib/api/admin"
-import { getMe, type Member } from "@/lib/api/auth"
-import {
-  clearStoredAuthTokens,
-  getStoredAuthTokens,
-} from "@/lib/api/auth-token-storage"
 
 const userFeatureLinks = [
   {
@@ -60,56 +56,39 @@ const adminFeatureLink = {
 }
 
 export function HomeFeatureCards() {
-  const [member, setMember] = useState<Member | null>(null)
+  const { member, status } = useSessionState()
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     let isActive = true
 
-    async function loadMember() {
-      if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setIsChecking(false)
-        }
+    async function checkAdminAccess() {
+      if (!member) {
+        setIsAdmin(false)
+        return
+      }
+
+      if (member.role) {
+        setIsAdmin(member.role === "ADMIN")
         return
       }
 
       try {
-        const currentMember = await getMe()
-
-        let hasAdminAccess = currentMember.role === "ADMIN"
-
-        if (!currentMember.role) {
-          try {
-            await getAdminMembers({ page: 0, size: 1 })
-            hasAdminAccess = true
-          } catch {
-            hasAdminAccess = false
-          }
-        }
-
-        if (isActive) {
-          setMember(currentMember)
-          setIsAdmin(hasAdminAccess)
-        }
+        await getAdminMembers({ page: 0, size: 1 })
+        if (isActive) setIsAdmin(true)
       } catch {
-        clearStoredAuthTokens()
-      } finally {
-        if (isActive) {
-          setIsChecking(false)
-        }
+        if (isActive) setIsAdmin(false)
       }
     }
 
-    void loadMember()
+    void checkAdminAccess()
 
     return () => {
       isActive = false
     }
-  }, [])
+  }, [member])
 
-  if (isChecking || !member) {
+  if (status === "checking" || !member) {
     return null
   }
 

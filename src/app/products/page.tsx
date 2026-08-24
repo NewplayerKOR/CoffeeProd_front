@@ -361,14 +361,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         )}
 
         <section className="catalog-grid grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
-          {products.map((product) => (
+          {products.map((product, index) => (
             <Link
               key={product.id}
               href={`/products/${product.id}`}
               className="catalog-card group overflow-hidden border-b border-neutral-200 bg-white transition-colors hover:border-neutral-950"
             >
               <div className="aspect-square bg-neutral-100 md:aspect-[4/3]">
-                <ProductImage src={product.imageUrl} alt={product.name} />
+                <ProductImage
+                  src={product.imageUrl}
+                  alt={product.name}
+                  sizes="(max-width: 700px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  loading={index < 2 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                />
               </div>
 
               <div className="flex min-h-36 flex-col p-3 md:min-h-52 md:p-5">
@@ -526,12 +532,20 @@ async function loadProductList(
 ): Promise<ProductListState> {
   const [categoriesResult, processingMethodsResult, profileResult, productsResult] =
     await Promise.allSettled([
-    getCategories(),
-    getProcessingMethods(),
+    getCategories({
+      next: { revalidate: 300, tags: ["public-categories"] },
+    }),
+    getProcessingMethods({
+      next: { revalidate: 300, tags: ["coffee-references"] },
+    }),
     params.coffeeProfileId
-      ? getCoffeeProfile(params.coffeeProfileId)
+      ? getCoffeeProfile(params.coffeeProfileId, {
+          next: { revalidate: 60, tags: ["coffee-profiles"] },
+        })
       : Promise.resolve(null),
-    getProducts(params),
+    getProducts(params, {
+      next: { revalidate: 60, tags: ["public-products"] },
+    }),
   ])
 
   return {

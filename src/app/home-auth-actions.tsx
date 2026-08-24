@@ -3,68 +3,17 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { LogOut, UserRound } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
+import { useSessionState } from "@/components/session-state-provider"
 import { Button } from "@/components/ui/button"
-import { getMe, logout, type Member } from "@/lib/api/auth"
-import {
-  clearStoredAuthTokens,
-  getStoredAuthTokens,
-} from "@/lib/api/auth-token-storage"
-import { AUTH_EXPIRED_EVENT } from "@/lib/api/client"
-
-type AuthStatus = "checking" | "guest" | "authenticated"
+import { logout } from "@/lib/api/auth"
+import { clearStoredAuthTokens } from "@/lib/api/auth-token-storage"
 
 export function HomeAuthActions({ compact = false }: { compact?: boolean }) {
   const router = useRouter()
-  const [status, setStatus] = useState<AuthStatus>("checking")
-  const [member, setMember] = useState<Member | null>(null)
+  const { status, member } = useSessionState()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  useEffect(() => {
-    let isActive = true
-
-    async function syncAuthState() {
-      const tokens = getStoredAuthTokens()
-
-      if (!tokens) {
-        if (isActive) {
-          setMember(null)
-          setStatus("guest")
-        }
-        return
-      }
-
-      try {
-        const currentMember = await getMe()
-
-        if (isActive) {
-          setMember(currentMember)
-          setStatus("authenticated")
-        }
-      } catch {
-        clearStoredAuthTokens()
-
-        if (isActive) {
-          setMember(null)
-          setStatus("guest")
-        }
-      }
-    }
-
-    function handleAuthExpired() {
-      setMember(null)
-      setStatus("guest")
-    }
-
-    void syncAuthState()
-    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
-
-    return () => {
-      isActive = false
-      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
-    }
-  }, [])
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -75,11 +24,8 @@ export function HomeAuthActions({ compact = false }: { compact?: boolean }) {
       // 로그아웃 API 실패 여부와 무관하게 프론트 토큰은 제거합니다.
     } finally {
       clearStoredAuthTokens()
-      setMember(null)
-      setStatus("guest")
       setIsLoggingOut(false)
-      router.refresh()
-      window.location.reload()
+      router.replace("/")
     }
   }
 

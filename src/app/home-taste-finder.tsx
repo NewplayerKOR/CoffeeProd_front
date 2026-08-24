@@ -282,7 +282,12 @@ function TasteMatch({
   return (
     <Link href={href} className="taste-match" aria-label={`${name} 상품 보기`}>
       <div className="taste-match-image">
-        <ProductImage src={imageUrl} alt={name} />
+        <ProductImage
+          key={imageUrl ?? "taste-match-fallback"}
+          src={imageUrl}
+          alt={name}
+          sizes="(max-width: 700px) 120px, 220px"
+        />
       </div>
       <div className="taste-match-copy">
         <div className="taste-match-score">

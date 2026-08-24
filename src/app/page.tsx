@@ -28,7 +28,7 @@ export default async function Home() {
           src="/images/coffeeprod-hero-light.webp"
           alt="커피 패키지와 핸드드립 도구가 놓인 밝은 로스터리"
           fill
-          priority
+          fetchPriority="high"
           sizes="100vw"
           className="home-hero-image home-hero-image-light"
         />
@@ -36,7 +36,7 @@ export default async function Home() {
           src="/images/coffeeprod-hero-dark.webp"
           alt="커피 패키지와 핸드드립 도구가 놓인 어두운 로스터리"
           fill
-          priority
+          fetchPriority="high"
           sizes="100vw"
           className="home-hero-image home-hero-image-dark"
         />
@@ -102,7 +102,11 @@ export default async function Home() {
                 className="editorial-product"
               >
                 <div className="editorial-product-image">
-                  <ProductImage src={product.imageUrl} alt={product.name} />
+                  <ProductImage
+                    src={product.imageUrl}
+                    alt={product.name}
+                    sizes="(max-width: 700px) 50vw, 25vw"
+                  />
                 </div>
                 <div className="editorial-product-copy">
                   <p>
@@ -169,11 +173,16 @@ function buildHomeSlides(products: ProductListItem[]): HomeSlide[] {
 
 async function loadFeaturedProducts(): Promise<ProductListItem[]> {
   try {
-    const products = await getProducts({
-      page: 0,
-      size: 4,
-      sort: "createdAt,desc",
-    })
+    const products = await getProducts(
+      {
+        page: 0,
+        size: 4,
+        sort: "createdAt,desc",
+      },
+      {
+        next: { revalidate: 60, tags: ["public-products"] },
+      }
+    )
 
     return products.content
   } catch {

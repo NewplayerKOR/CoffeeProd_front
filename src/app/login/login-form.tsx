@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Lock, Mail } from "lucide-react"
 import { type ChangeEvent, type FormEvent, useState } from "react"
@@ -185,17 +184,6 @@ export function LoginForm({
               {fieldErrors.password}
             </p>
           )}
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-neutral-600">
-            <input type="checkbox" className="size-4" />
-            로그인 유지
-          </label>
-
-          <Link href="/forgot-password" className="font-medium hover:text-neutral-950">
-            비밀번호 찾기
-          </Link>
         </div>
 
         {formMessage && (

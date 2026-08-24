@@ -7,22 +7,21 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { ProductImage } from "@/app/products/product-image"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { useSessionState } from "@/components/session-state-provider"
 import { Button } from "@/components/ui/button"
 import {
   clearCart,
   deleteCartItem,
-  getCart,
   updateCartItem,
   type Cart,
   type CartItem,
   type GrindType,
 } from "@/lib/api/cart"
-import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { ApiError } from "@/lib/api/types"
 import { calculateEstimatedDeliveryFee } from "@/lib/order-pricing"
 
@@ -42,59 +41,26 @@ const grindOptions = [
 type CartStatus = "checking" | "guest" | "ready"
 
 export function CartView() {
-  const [cart, setCart] = useState<Cart>(emptyCart)
-  const [status, setStatus] = useState<CartStatus>("checking")
+  const {
+    status: sessionStatus,
+    cart,
+    cartStatus,
+    cartError,
+    replaceCart,
+  } = useSessionState()
   const [pendingItemId, setPendingItemId] = useState<number | null>(null)
   const [isClearing, setIsClearing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  const status: CartStatus =
+    sessionStatus === "checking" || cartStatus === "checking"
+      ? "checking"
+      : sessionStatus === "guest"
+        ? "guest"
+        : "ready"
   const hasItems = cart.items.length > 0
   const shippingFee = calculateEstimatedDeliveryFee(cart.totalPrice)
   const orderTotal = cart.totalPrice + shippingFee
-
-  useEffect(() => {
-    let isActive = true
-
-    async function loadCart() {
-      if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setStatus("guest")
-        }
-        return
-      }
-
-      try {
-        const nextCart = await getCart()
-
-        if (isActive) {
-          setCart(nextCart)
-          setStatus("ready")
-        }
-      } catch (error) {
-        if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
-          if (isActive) {
-            setStatus("guest")
-          }
-          return
-        }
-
-        if (isActive) {
-          setMessage(
-            error instanceof ApiError
-              ? error.message
-              : "장바구니를 불러오지 못했습니다."
-          )
-          setStatus("ready")
-        }
-      }
-    }
-
-    void loadCart()
-
-    return () => {
-      isActive = false
-    }
-  }, [])
 
   async function handleUpdateItem(item: CartItem, nextQuantity: number) {
     if (nextQuantity <= 0) {
@@ -110,7 +76,7 @@ export function CartView() {
         quantity: nextQuantity,
         grindType: item.grindType,
       })
-      setCart(nextCart)
+      replaceCart(nextCart)
     } catch (error) {
       setMessage(getCartErrorMessage(error))
     } finally {
@@ -127,7 +93,7 @@ export function CartView() {
         quantity: item.quantity,
         grindType,
       })
-      setCart(nextCart)
+      replaceCart(nextCart)
     } catch (error) {
       setMessage(getCartErrorMessage(error))
     } finally {
@@ -141,7 +107,7 @@ export function CartView() {
 
     try {
       const nextCart = await deleteCartItem(cartItemId)
-      setCart(nextCart)
+      replaceCart(nextCart)
     } catch (error) {
       setMessage(getCartErrorMessage(error))
     } finally {
@@ -155,7 +121,7 @@ export function CartView() {
 
     try {
       await clearCart()
-      setCart(emptyCart)
+      replaceCart(emptyCart)
     } catch (error) {
       setMessage(getCartErrorMessage(error))
     } finally {
@@ -166,7 +132,7 @@ export function CartView() {
   return (
     <main className="cart-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <SiteHeader />
-      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
+      <div className="cart-page-content mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
           <p className="editorial-kicker">Cart</p>
@@ -200,12 +166,12 @@ export function CartView() {
         {status === "ready" && (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex flex-col gap-4">
-              {message && (
+              {(message || cartError) && (
                 <p
                   className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
                   role="alert"
                 >
-                  {message}
+                  {message || cartError}
                 </p>
               )}
 
@@ -242,6 +208,7 @@ export function CartView() {
                         <ProductImage
                           src={item.imageUrl}
                           alt={item.productName}
+                          sizes="(max-width: 767px) calc(100vw - 64px), 112px"
                         />
                       </div>
                     </Link>

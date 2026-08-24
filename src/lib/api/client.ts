@@ -35,7 +35,13 @@ export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   query?: QueryParams
   auth?: boolean
   retryOnUnauthorized?: boolean
+  next?: {
+    revalidate?: number | false
+    tags?: string[]
+  }
 }
+
+export type ApiCacheOptions = Pick<ApiRequestOptions, "cache" | "next">
 
 let pendingTokenRefresh: Promise<boolean> | null = null
 

@@ -1,5 +1,9 @@
 import type { RoastLevel } from "./catalog"
-import { apiRequest, type QueryParams } from "./client"
+import {
+  apiRequest,
+  type ApiCacheOptions,
+  type QueryParams,
+} from "./client"
 import type { PageResponse } from "./types"
 
 export type BeanType = "SINGLE_ORIGIN" | "BLEND"
@@ -205,34 +209,41 @@ export type CoffeeReferenceUpdateRequest = Omit<
   "code"
 >
 
-export function getCoffeeProfiles(params: CoffeeProfileListParams = {}) {
+export function getCoffeeProfiles(
+  params: CoffeeProfileListParams = {},
+  cacheOptions: ApiCacheOptions = {}
+) {
   return apiRequest<PageResponse<CoffeeProfile>>("/api/v1/coffee-profiles", {
     auth: false,
     query: params as QueryParams,
+    ...cacheOptions,
   })
 }
 
-export function getCoffeeProfile(coffeeProfileId: number | string) {
+export function getCoffeeProfile(
+  coffeeProfileId: number | string,
+  cacheOptions: ApiCacheOptions = {}
+) {
   return apiRequest<CoffeeProfile>(
     `/api/v1/coffee-profiles/${encodeURIComponent(coffeeProfileId)}`,
-    { auth: false }
+    { auth: false, ...cacheOptions }
   )
 }
 
-export function getProcessingMethods() {
-  return getPublicCoffeeReferences("processing-methods")
+export function getProcessingMethods(cacheOptions: ApiCacheOptions = {}) {
+  return getPublicCoffeeReferences("processing-methods", cacheOptions)
 }
 
-export function getFlavorNotes() {
-  return getPublicCoffeeReferences("flavor-notes")
+export function getFlavorNotes(cacheOptions: ApiCacheOptions = {}) {
+  return getPublicCoffeeReferences("flavor-notes", cacheOptions)
 }
 
-export function getBrewMethods() {
-  return getPublicCoffeeReferences("brew-methods")
+export function getBrewMethods(cacheOptions: ApiCacheOptions = {}) {
+  return getPublicCoffeeReferences("brew-methods", cacheOptions)
 }
 
-export function getCoffeeVarieties() {
-  return getPublicCoffeeReferences("coffee-varieties")
+export function getCoffeeVarieties(cacheOptions: ApiCacheOptions = {}) {
+  return getPublicCoffeeReferences("coffee-varieties", cacheOptions)
 }
 
 export function recommendCoffee(payload: CoffeeRecommendationRequest) {
@@ -329,6 +340,12 @@ export function updateAdminCoffeeReference(
   )
 }
 
-function getPublicCoffeeReferences(kind: CoffeeReferenceKind) {
-  return apiRequest<CoffeeReference[]>(`/api/v1/${kind}`, { auth: false })
+function getPublicCoffeeReferences(
+  kind: CoffeeReferenceKind,
+  cacheOptions: ApiCacheOptions
+) {
+  return apiRequest<CoffeeReference[]>(`/api/v1/${kind}`, {
+    auth: false,
+    ...cacheOptions,
+  })
 }

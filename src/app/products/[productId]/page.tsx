@@ -25,7 +25,6 @@ import {
 import { cn } from "@/lib/utils"
 
 import { ProductImage } from "../product-image"
-import { ProductQnas, ProductReviews } from "./product-community"
 import { ProductPurchaseForm } from "./product-purchase-form"
 
 const detailTabs = [
@@ -110,7 +109,13 @@ export default async function ProductDetailPage({
       <section className="mt-6 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
           <div className="aspect-square">
-            <ProductImage src={product.imageUrl} alt={product.name} />
+            <ProductImage
+              src={product.imageUrl}
+              alt={product.name}
+              sizes="(max-width: 767px) calc(100vw - 32px), 50vw"
+              loading="eager"
+              fetchPriority="high"
+            />
           </div>
         </div>
 
@@ -246,7 +251,7 @@ function ProductStatusPill({ status }: { status: ProductStatus }) {
   )
 }
 
-function ProductDetailTab({
+async function ProductDetailTab({
   product,
   selectedTab,
 }: {
@@ -254,10 +259,14 @@ function ProductDetailTab({
   selectedTab: DetailTabId
 }) {
   if (selectedTab === "reviews") {
+    const { ProductReviews } = await import("./product-community")
+
     return <ProductReviews productId={product.id} />
   }
 
   if (selectedTab === "qna") {
+    const { ProductQnas } = await import("./product-community")
+
     return <ProductQnas productId={product.id} />
   }
 
@@ -375,7 +384,9 @@ function ProductSpec({ label, value }: { label: string; value: string }) {
 async function loadProduct(productId: string): Promise<ProductLoadState> {
   try {
     return {
-      product: await getProduct(productId),
+      product: await getProduct(productId, {
+        next: { revalidate: 15, tags: ["public-products"] },
+      }),
       errorMessage: null,
       notFound: false,
     }

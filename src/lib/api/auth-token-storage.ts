@@ -5,6 +5,8 @@ export type AuthTokens = {
 
 const AUTH_TOKENS_STORAGE_KEY = "coffeeprod.auth.tokens"
 
+export const AUTH_TOKENS_CHANGED_EVENT = "coffeeprod:auth-tokens-changed"
+
 function canUseLocalStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined"
 }
@@ -56,6 +58,7 @@ export function setStoredAuthTokens(tokens: AuthTokens) {
   }
 
   window.localStorage.setItem(AUTH_TOKENS_STORAGE_KEY, JSON.stringify(tokens))
+  window.dispatchEvent(new CustomEvent(AUTH_TOKENS_CHANGED_EVENT))
 }
 
 export function clearStoredAuthTokens() {
@@ -63,7 +66,13 @@ export function clearStoredAuthTokens() {
     return
   }
 
+  const hadTokens = window.localStorage.getItem(AUTH_TOKENS_STORAGE_KEY) !== null
+
   window.localStorage.removeItem(AUTH_TOKENS_STORAGE_KEY)
+
+  if (hadTokens) {
+    window.dispatchEvent(new CustomEvent(AUTH_TOKENS_CHANGED_EVENT))
+  }
 }
 
 export function getStoredAccessToken() {

@@ -193,7 +193,7 @@ html:not(.dark) .text-neutral-600 {
 }
 
 html:not(.dark) .text-neutral-500 {
-  color: #6e7972 !important;
+  color: #606b64 !important;
 }
 
 html:not(.dark) .border-neutral-100,
@@ -1249,6 +1249,10 @@ html.dark .home-hero-actions [data-variant="outline"] {
   top: 92px;
 }
 
+.cart-page-content {
+  min-height: calc(100dvh - 70px);
+}
+
 .admin-header .site-wordmark span {
   letter-spacing: 0;
 }
@@ -1793,7 +1797,9 @@ html.dark .text-amber-800 {
     aspect-ratio: 4 / 3;
   }
 
-  .auth-page::before {
+  .auth-page::before,
+  html.dark .auth-page::before {
+    background-image: none;
     background-position: 70% center;
     opacity: 0.09;
   }
@@ -1805,6 +1811,7 @@ html.dark .text-amber-800 {
 
   .auth-panel {
     padding: 22px !important;
+    backdrop-filter: none;
   }
 
   .site-footer-inner {

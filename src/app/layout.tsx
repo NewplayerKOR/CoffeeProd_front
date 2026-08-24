@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 
+import { SessionStateProvider } from "@/components/session-state-provider"
+
 import "./globals.css"
 
 const geistSans = Geist({
@@ -48,7 +50,9 @@ try {
         />
       </head>
       <body className="flex min-h-dvh flex-col">
-        <div className="flex flex-1 flex-col">{children}</div>
+        <SessionStateProvider>
+          <div className="flex flex-1 flex-col">{children}</div>
+        </SessionStateProvider>
       </body>
     </html>
   )

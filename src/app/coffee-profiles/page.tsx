@@ -149,11 +149,22 @@ export default async function CoffeeProfilesPage({
 async function loadProfiles(page: number) {
   const [profiles, processingMethods, flavorNotes, brewMethods, varieties] =
     await Promise.allSettled([
-      getCoffeeProfiles({ page, size: 12, sort: "createdAt,desc" }),
-      getProcessingMethods(),
-      getFlavorNotes(),
-      getBrewMethods(),
-      getCoffeeVarieties(),
+      getCoffeeProfiles(
+        { page, size: 12, sort: "createdAt,desc" },
+        { next: { revalidate: 60, tags: ["coffee-profiles"] } }
+      ),
+      getProcessingMethods({
+        next: { revalidate: 300, tags: ["coffee-references"] },
+      }),
+      getFlavorNotes({
+        next: { revalidate: 300, tags: ["coffee-references"] },
+      }),
+      getBrewMethods({
+        next: { revalidate: 300, tags: ["coffee-references"] },
+      }),
+      getCoffeeVarieties({
+        next: { revalidate: 300, tags: ["coffee-references"] },
+      }),
     ])
 
   return {

@@ -132,6 +132,7 @@ export function HomeSlider({ slides }: HomeSliderProps) {
               src={activeSlide.imageUrl}
               alt={activeSlide.title}
               className="journal-slider-image"
+              sizes="(max-width: 700px) 100vw, 65vw"
             />
           </Link>
           {safeSlides.length > 1 && (

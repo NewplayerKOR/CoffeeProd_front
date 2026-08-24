@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import Image, { type ImageProps } from "next/image"
 import { useState } from "react"
 
 import { cn } from "@/lib/utils"
@@ -11,9 +11,19 @@ type ProductImageProps = {
   src: string | null
   alt: string
   className?: string
+  sizes?: string
+  loading?: ImageProps["loading"]
+  fetchPriority?: ImageProps["fetchPriority"]
 }
 
-export function ProductImage({ src, alt, className }: ProductImageProps) {
+export function ProductImage({
+  src,
+  alt,
+  className,
+  sizes = "100vw",
+  loading,
+  fetchPriority,
+}: ProductImageProps) {
   const [imageSrc, setImageSrc] = useState(src || fallbackImageSrc)
 
   return (
@@ -22,10 +32,12 @@ export function ProductImage({ src, alt, className }: ProductImageProps) {
       alt={alt}
       width={640}
       height={480}
+      sizes={sizes}
       className={cn("h-full w-full object-cover object-center", className)}
       draggable={false}
-      loading="lazy"
-      unoptimized={imageSrc !== fallbackImageSrc}
+      loading={loading}
+      fetchPriority={fetchPriority}
+      unoptimized={isExternalImage(imageSrc)}
       onError={() => {
         if (imageSrc !== fallbackImageSrc) {
           setImageSrc(fallbackImageSrc)
@@ -33,4 +45,8 @@ export function ProductImage({ src, alt, className }: ProductImageProps) {
       }}
     />
   )
+}
+
+function isExternalImage(src: string) {
+  return src.startsWith("http://") || src.startsWith("https://")
 }

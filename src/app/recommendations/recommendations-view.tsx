@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { RotateCcw, Save, Sparkles } from "lucide-react"
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useState } from "react"
 
 import {
   CoffeePreferenceFields,
@@ -12,11 +12,10 @@ import {
 import { CoffeeRecommendationResults } from "@/components/coffee-recommendation-results"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { useSessionState } from "@/components/session-state-provider"
 import { Button } from "@/components/ui/button"
-import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
   getMyCoffeeRecommendations,
-  getProcessingMethods,
   recommendCoffee,
   type CoffeeRecommendation,
   type CoffeeReference,
@@ -27,47 +26,23 @@ import {
   toCoffeePreferencePayload,
 } from "@/lib/coffee-preference"
 
-export function RecommendationsView() {
+export function RecommendationsView({
+  initialProcessingMethods,
+  initialReferenceError,
+}: {
+  initialProcessingMethods: CoffeeReference[]
+  initialReferenceError: string | null
+}) {
+  const { status } = useSessionState()
   const [form, setForm] = useState<CoffeePreferenceFormState>(
     emptyCoffeePreferenceForm
-  )
-  const [processingMethods, setProcessingMethods] = useState<CoffeeReference[]>(
-    []
   )
   const [recommendations, setRecommendations] = useState<
     CoffeeRecommendation[] | null
   >(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoadingReferences, setIsLoadingReferences] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    let isActive = true
-    const hasStoredAuth = Boolean(getStoredAuthTokens())
-
-    getProcessingMethods()
-      .then((methods) => {
-        if (isActive) {
-          setProcessingMethods(methods)
-        }
-      })
-      .catch((error) => {
-        if (isActive) {
-          setMessage(getCoffeeErrorMessage(error))
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsAuthenticated(hasStoredAuth)
-          setIsLoadingReferences(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [])
+  const [message, setMessage] = useState<string | null>(initialReferenceError)
+  const isAuthenticated = status === "authenticated"
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -138,8 +113,8 @@ export function RecommendationsView() {
             <div className="mt-5">
               <CoffeePreferenceFields
                 value={form}
-                processingMethods={processingMethods}
-                disabled={isSubmitting || isLoadingReferences}
+                processingMethods={initialProcessingMethods}
+                disabled={isSubmitting}
                 onChange={(nextForm) => {
                   setForm(nextForm)
                   setMessage(null)
@@ -157,7 +132,7 @@ export function RecommendationsView() {
             )}
 
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-              <Button type="submit" disabled={isSubmitting || isLoadingReferences}>
+              <Button type="submit" disabled={isSubmitting}>
                 <Sparkles data-icon="inline-start" />
                 {isSubmitting ? "추천 중" : "추천 받기"}
               </Button>

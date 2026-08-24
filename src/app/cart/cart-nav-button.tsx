@@ -2,16 +2,10 @@
 
 import Link from "next/link"
 import { ShoppingCart } from "lucide-react"
-import { useEffect, useState } from "react"
 
+import { useSessionState } from "@/components/session-state-provider"
 import { Button } from "@/components/ui/button"
-import { CART_CHANGED_EVENT, getCart } from "@/lib/api/cart"
-import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { cn } from "@/lib/utils"
-
-type CartChangedEventDetail = {
-  totalQuantity?: number
-}
 
 type CartNavButtonProps = {
   className?: string
@@ -19,50 +13,8 @@ type CartNavButtonProps = {
 }
 
 export function CartNavButton({ className, iconOnly = false }: CartNavButtonProps) {
-  const [totalQuantity, setTotalQuantity] = useState(0)
-
-  useEffect(() => {
-    let isActive = true
-
-    async function syncCart() {
-      if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setTotalQuantity(0)
-        }
-        return
-      }
-
-      try {
-        const cart = await getCart()
-
-        if (isActive) {
-          setTotalQuantity(cart.totalQuantity)
-        }
-      } catch {
-        if (isActive) {
-          setTotalQuantity(0)
-        }
-      }
-    }
-
-    function handleCartChanged(event: Event) {
-      const detail = (event as CustomEvent<CartChangedEventDetail>).detail
-
-      if (typeof detail?.totalQuantity === "number") {
-        setTotalQuantity(detail.totalQuantity)
-      }
-
-      void syncCart()
-    }
-
-    void syncCart()
-    window.addEventListener(CART_CHANGED_EVENT, handleCartChanged)
-
-    return () => {
-      isActive = false
-      window.removeEventListener(CART_CHANGED_EVENT, handleCartChanged)
-    }
-  }, [])
+  const { cart } = useSessionState()
+  const totalQuantity = cart.totalQuantity
 
   return (
     <Button
