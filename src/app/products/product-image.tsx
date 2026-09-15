@@ -3,9 +3,12 @@
 import Image, { type ImageProps } from "next/image"
 import { useState } from "react"
 
+import {
+  PRODUCT_IMAGE_FALLBACK_SRC,
+  resolveProductImageRenderSource,
+  resolveProductImageSource,
+} from "@/lib/product-image-policy"
 import { cn } from "@/lib/utils"
-
-const fallbackImageSrc = "/images/product-fallback.webp"
 
 type ProductImageProps = {
   src: string | null
@@ -24,29 +27,27 @@ export function ProductImage({
   loading,
   fetchPriority,
 }: ProductImageProps) {
-  const [imageSrc, setImageSrc] = useState(src || fallbackImageSrc)
+  const resolvedSource = resolveProductImageSource(src)
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  const imageSource = resolveProductImageRenderSource(src, failedSource)
 
   return (
     <Image
-      src={imageSrc}
+      src={imageSource}
       alt={alt}
-      width={640}
-      height={480}
+      width={1024}
+      height={1024}
       sizes={sizes}
+      quality={75}
       className={cn("h-full w-full object-cover object-center", className)}
       draggable={false}
       loading={loading}
       fetchPriority={fetchPriority}
-      unoptimized={isExternalImage(imageSrc)}
       onError={() => {
-        if (imageSrc !== fallbackImageSrc) {
-          setImageSrc(fallbackImageSrc)
+        if (imageSource !== PRODUCT_IMAGE_FALLBACK_SRC) {
+          setFailedSource(resolvedSource)
         }
       }}
     />
   )
-}
-
-function isExternalImage(src: string) {
-  return src.startsWith("http://") || src.startsWith("https://")
 }

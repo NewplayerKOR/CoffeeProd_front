@@ -29,6 +29,12 @@ import {
   type RoastLevel,
 } from "@/lib/api/catalog"
 import { ApiError } from "@/lib/api/types"
+import {
+  getProductImageUrlError,
+  isApprovedProductImageUrl,
+  normalizeProductImageUrl,
+  PRODUCT_IMAGE_BASE_URL,
+} from "@/lib/product-image-policy"
 
 type ProductAdminFormProps = {
   mode: "create" | "edit"
@@ -332,7 +338,10 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
             value={form.image_url}
             error={errors.image_url}
             disabled={isSubmitting}
-            placeholder="https://example.com/image.jpg"
+            placeholder={`${PRODUCT_IMAGE_BASE_URL}so001-l-v1.webp`}
+            description="비워 두거나 승인된 R2 카탈로그의 버전 WebP URL을 입력합니다."
+            type="url"
+            maxLength={500}
             onChange={handleInputChange}
           />
 
@@ -367,7 +376,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
                 초기화
               </Button>
             )}
-            {form.image_url && (
+            {isApprovedProductImageUrl(form.image_url.trim()) && (
               <Button type="button" variant="outline" asChild>
                 <a href={form.image_url} target="_blank" rel="noreferrer">
                   <ImageIcon data-icon="inline-start" />
@@ -409,8 +418,10 @@ function TextField({
   error,
   disabled,
   placeholder,
+  description,
   type = "text",
   min,
+  maxLength,
   onChange,
 }: {
   label: string
@@ -419,8 +430,10 @@ function TextField({
   error?: string
   disabled: boolean
   placeholder?: string
-  type?: "text" | "number"
+  description?: string
+  type?: "text" | "number" | "url"
   min?: number
+  maxLength?: number
   onChange: (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => void
@@ -431,6 +444,7 @@ function TextField({
         name={name}
         type={type}
         min={min}
+        maxLength={maxLength}
         value={value}
         disabled={disabled}
         className={inputClassName}
@@ -438,6 +452,11 @@ function TextField({
         aria-invalid={Boolean(error)}
         onChange={onChange}
       />
+      {description && !error && (
+        <span className="mt-1.5 block text-xs leading-5 text-neutral-500">
+          {description}
+        </span>
+      )}
     </Field>
   )
 }
@@ -481,6 +500,12 @@ function validateProductForm(values: ProductFormState) {
     errors.stockQuantity = "재고 수량은 0 이상의 정수로 입력해 주세요."
   }
 
+  const imageUrlError = getProductImageUrlError(values.image_url)
+
+  if (imageUrlError) {
+    errors.image_url = imageUrlError
+  }
+
   return errors
 }
 
@@ -497,7 +522,7 @@ function toProductRequest(values: ProductFormState): AdminProductRequest {
     stockQuantity: Number(values.stockQuantity),
     roastLevel: values.roastLevel,
     description: values.description.trim(),
-    image_url: values.image_url.trim(),
+    image_url: normalizeProductImageUrl(values.image_url),
   }
 }
 

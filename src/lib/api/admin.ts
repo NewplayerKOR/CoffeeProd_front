@@ -24,7 +24,7 @@ export type AdminProductRequest = {
   stockQuantity: number
   roastLevel: RoastLevel
   description: string
-  image_url: string
+  image_url: string | null
 }
 
 export type AdminProductStatusRequest = {
