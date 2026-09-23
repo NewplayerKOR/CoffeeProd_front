@@ -22,7 +22,7 @@ export default async function AdminMemberDetailPage({
     <AdminPageShell
       eyebrow="Admin / Members"
       title="회원 상세"
-      description="관리자 회원 단건 조회 API로 회원 상세 정보를 확인합니다."
+      description="회원 상세 정보를 확인하고 등급과 상태를 관리합니다."
       actions={
         <Button variant="outline" asChild>
           <Link href="/admin/members">

@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import {
@@ -137,6 +138,7 @@ export function ProductsAdminView() {
   }
 
   async function handleStatusSubmit(product: ProductListItem) {
+    if (!(await confirmAction(`${product.name}의 판매 상태를 변경할까요? 고객에게 표시되는 상태가 바뀌며 복원하려면 다시 변경해야 합니다.`))) return
     const status = statusDrafts[product.id] ?? product.status
 
     setPendingAction({ productId: product.id, type: "status" })
@@ -198,6 +200,7 @@ export function ProductsAdminView() {
   }
 
   async function handleDeleteProduct(product: ProductListItem) {
+    if (!(await confirmAction(`${product.name} 상품을 삭제할까요? 판매 목록에서 제외되며 이 화면에서 복구할 수 없습니다.`))) return
     setPendingAction({ productId: product.id, type: "delete" })
     setMessage(null)
 
@@ -272,7 +275,7 @@ export function ProductsAdminView() {
       </div>
 
       <p className="mt-3 text-sm leading-6 text-neutral-600">
-        관리자 상품 조회 API를 사용해 판매중, 품절, 숨김 상품을 모두 조회합니다.
+        판매중, 품절, 숨김 상품을 확인하고 판매 상태와 재고를 관리합니다.
         삭제 처리는 실제 DB 삭제가 아니라 상품 상태를 HIDDEN으로 변경합니다.
       </p>
 

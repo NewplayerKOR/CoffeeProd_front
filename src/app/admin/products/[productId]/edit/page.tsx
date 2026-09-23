@@ -22,7 +22,7 @@ export default async function AdminProductEditPage({
     <AdminPageShell
       eyebrow="Admin / Products"
       title="상품 수정"
-      description="상품 상세 정보를 불러온 뒤 관리자 상품 수정 API로 변경 사항을 저장합니다."
+      description="상품 정보를 확인하고 변경 사항을 저장합니다."
       actions={
         <Button variant="outline" asChild>
           <Link href="/admin/products">

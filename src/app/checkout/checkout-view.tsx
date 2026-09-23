@@ -361,7 +361,7 @@ export function CheckoutView() {
                 </span>
               </div>
               <p className="mt-2 text-xs leading-5 text-neutral-500">
-                최종 배송비와 결제 금액은 주문 생성 시 서버에서 확정됩니다.
+                최종 배송비와 결제 금액은 다음 결제 화면에서 확인해 주세요.
               </p>
 
               <Button
@@ -370,7 +370,7 @@ export function CheckoutView() {
                 disabled={!hasItems || !selectedAddressId || isSubmitting}
               >
                 <PackageCheck data-icon="inline-start" />
-                {isSubmitting ? "주문 생성 중" : "주문 생성"}
+                {isSubmitting ? "주문 확인 중" : "주문 확인"}
               </Button>
             </aside>
           </form>

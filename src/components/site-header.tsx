@@ -4,6 +4,7 @@ import { Menu } from "lucide-react"
 import { CartNavButton } from "@/app/cart/cart-nav-button"
 import { HomeAuthActions } from "@/app/home-auth-actions"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NavigationLink } from "@/components/navigation-link"
 
 const navigation = [
   { href: "/about", label: "소개" },
@@ -23,9 +24,9 @@ export function SiteHeader() {
 
         <nav className="site-desktop-nav" aria-label="주요 메뉴">
           {navigation.map((item) => (
-            <Link key={item.href} href={item.href}>
+            <NavigationLink key={item.href} href={item.href}>
               {item.label}
-            </Link>
+            </NavigationLink>
           ))}
         </nav>
 
@@ -45,9 +46,9 @@ export function SiteHeader() {
             <div className="site-mobile-menu-panel">
               <nav aria-label="모바일 주요 메뉴">
                 {navigation.map((item) => (
-                  <Link key={item.href} href={item.href}>
+                  <NavigationLink key={item.href} href={item.href}>
                     {item.label}
-                  </Link>
+                  </NavigationLink>
                 ))}
               </nav>
               <div className="site-mobile-account">

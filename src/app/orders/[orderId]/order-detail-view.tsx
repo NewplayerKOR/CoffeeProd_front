@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import {
@@ -81,6 +82,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   }, [orderId])
 
   async function handleCancelOrder() {
+    if (!(await confirmAction("이 주문을 취소할까요? 취소 후에는 이 주문으로 결제를 이어갈 수 없습니다."))) return
     if (!order || !canCancelOrder(order.status)) {
       return
     }

@@ -117,7 +117,7 @@ async function requestOnce<T>(
 
     throw new ApiError({
       kind: "NETWORK_ERROR",
-      message: "서버에 연결할 수 없습니다.",
+      message: "연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.",
       httpStatus: 0,
     })
   }
@@ -128,7 +128,7 @@ async function requestOnce<T>(
   if (!response.ok || effectiveStatus >= 400) {
     throw new ApiError({
       kind: resolveErrorKind(response.status, effectiveStatus, envelope.errors),
-      message: envelope.message || "API 요청에 실패했습니다.",
+      message: envelope.message || "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
       httpStatus: response.status,
       bodyStatus: envelope.status,
       errors: envelope.errors,
@@ -191,7 +191,7 @@ async function readCommonResponse<T>(
   if (!isCommonResponse<T>(payload)) {
     throw new ApiError({
       kind: "PROTOCOL_ERROR",
-      message: "API 응답 형식이 올바르지 않습니다.",
+      message: "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
       httpStatus: response.status,
       data: payload,
     })

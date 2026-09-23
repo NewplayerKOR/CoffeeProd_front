@@ -11,7 +11,7 @@ import { getRoastLevelLabel } from "@/lib/coffee-display"
 import { HomeFeatureCards } from "./home-feature-cards"
 import { HomeSlider, type HomeSlide } from "./home-slider"
 import { HomeTasteFinder } from "./home-taste-finder"
-import { PortfolioNoticeDialog } from "./portfolio-notice-dialog"
+import { PortfolioNotice } from "./portfolio-notice"
 import { ProductImage } from "./products/product-image"
 
 export default async function Home() {
@@ -20,8 +20,8 @@ export default async function Home() {
 
   return (
     <main className="home-page">
-      <PortfolioNoticeDialog />
       <SiteHeader />
+      <PortfolioNotice />
 
       <section className="home-editorial-hero" aria-labelledby="home-title">
         <Image

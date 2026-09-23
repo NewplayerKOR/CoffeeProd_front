@@ -25,6 +25,7 @@ import {
 
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { PasswordVisibilityButton } from "@/components/password-visibility-button"
 import { Button } from "@/components/ui/button"
 import { getMe, type Member, type MemberGrade, type MemberStatus } from "@/lib/api/auth"
 import {
@@ -444,6 +445,7 @@ export function MyPageView() {
                   onSubmit={handleWithdrawSubmit}
                 >
                   <PasswordInput
+                    inputId="me-withdraw-currentPassword"
                     label="현재 비밀번호"
                     name="currentPassword"
                     value={withdrawPassword}
@@ -510,6 +512,7 @@ function MemberInfo({ label, value }: { label: string; value: string }) {
 }
 
 function PasswordInput({
+  inputId: explicitInputId,
   label,
   name,
   value,
@@ -517,6 +520,7 @@ function PasswordInput({
   disabled,
   onChange,
 }: {
+  inputId?: string
   label: string
   name: PasswordField | WithdrawField
   value: string
@@ -524,7 +528,8 @@ function PasswordInput({
   disabled: boolean
   onChange: (event: ChangeEvent<HTMLInputElement>) => void
 }) {
-  const inputId = `me-${name}`
+  const [visible, setVisible] = useState(false)
+  const inputId = explicitInputId ?? `me-${name}`
   const errorId = `${inputId}-error`
 
   return (
@@ -532,17 +537,29 @@ function PasswordInput({
       <label htmlFor={inputId} className="mb-2 block text-sm font-semibold">
         {label}
       </label>
-      <input
-        id={inputId}
-        name={name}
-        type="password"
-        value={value}
-        disabled={disabled}
-        className={inputClassName}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-        onChange={onChange}
-      />
+      <div
+        data-invalid={Boolean(error) || undefined}
+        className={`flex items-center rounded-lg border bg-white focus-within:border-neutral-950 ${error ? "border-red-300" : "border-neutral-300"}`}
+      >
+        <input
+          id={inputId}
+          name={name}
+          type={visible ? "text" : "password"}
+          value={value}
+          disabled={disabled}
+          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none disabled:text-neutral-400"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          onChange={onChange}
+        />
+        <PasswordVisibilityButton
+          inputId={inputId}
+          label={label}
+          visible={visible}
+          disabled={disabled}
+          onToggle={() => setVisible((current) => !current)}
+        />
+      </div>
       {error && (
         <p id={errorId} className={fieldErrorClassName}>
           {error}

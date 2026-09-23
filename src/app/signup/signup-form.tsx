@@ -10,8 +10,9 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react"
-import { type ChangeEvent, type FormEvent, useState } from "react"
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react"
 
+import { PasswordVisibilityButton } from "@/components/password-visibility-button"
 import { Button } from "@/components/ui/button"
 import { checkEmailAvailable, signup } from "@/lib/api/auth"
 import {
@@ -58,6 +59,13 @@ export function SignupForm() {
     useState<EmailCheckStatus>("idle")
   const [checkedEmail, setCheckedEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [canRetry, setCanRetry] = useState(false)
+  const [emailCheckFailed, setEmailCheckFailed] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
+  const fieldRefs = useRef<Partial<Record<SignupField, HTMLInputElement | null>>>({})
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
+  const emailCheckRequestId = useRef(0)
 
   const email = String(formData.email)
   const password = String(formData.password)
@@ -80,10 +88,13 @@ export function SignupForm() {
       [field]: undefined,
     }))
     setFormMessage(null)
+    setCanRetry(false)
 
     if (field === "email") {
+      emailCheckRequestId.current += 1
       setEmailCheckStatus("idle")
       setCheckedEmail("")
+      setEmailCheckFailed(false)
     }
   }
 
@@ -94,15 +105,19 @@ export function SignupForm() {
     if (emailError) {
       setFieldErrors((current) => ({ ...current, email: emailError }))
       setEmailCheckStatus("idle")
+      fieldRefs.current.email?.focus()
       return
     }
 
+    const requestId = ++emailCheckRequestId.current
     setEmailCheckStatus("checking")
+    setEmailCheckFailed(false)
     setFieldErrors((current) => ({ ...current, email: undefined }))
     setFormMessage(null)
 
     try {
       const result = await checkEmailAvailable(normalizedEmail)
+      if (requestId !== emailCheckRequestId.current) return
 
       if (result.available) {
         setCheckedEmail(normalizedEmail)
@@ -117,8 +132,11 @@ export function SignupForm() {
         email: "이미 사용 중인 이메일입니다.",
       }))
     } catch (error) {
+      if (requestId !== emailCheckRequestId.current) return
       setEmailCheckStatus("idle")
+      setEmailCheckFailed(true)
       setFormMessage(getErrorMessage(error))
+      window.requestAnimationFrame(() => formErrorRef.current?.focus())
     }
   }
 
@@ -138,6 +156,7 @@ export function SignupForm() {
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
       setFormMessage("입력 값을 다시 확인해 주세요.")
+      focusFirstError(nextErrors)
       return
     }
 
@@ -149,11 +168,14 @@ export function SignupForm() {
         ...current,
         email: "이메일 중복 확인을 다시 진행해 주세요.",
       }))
+      setFormMessage("이메일 중복 확인을 다시 진행해 주세요.")
+      fieldRefs.current.email?.focus()
       return
     }
 
     setIsSubmitting(true)
     setFormMessage(null)
+    setCanRetry(false)
 
     try {
       await signup({
@@ -166,18 +188,33 @@ export function SignupForm() {
       router.push("/login?signup=success")
     } catch (error) {
       const serverErrors = error instanceof ApiError ? error.errors : null
+      const serverFieldErrors = serverErrors?.length
+        ? toSignupFieldErrors(serverErrors)
+        : {}
 
-      if (serverErrors?.length) {
+      if (Object.keys(serverFieldErrors).length > 0) {
         setFieldErrors((current) => ({
           ...current,
-          ...toSignupFieldErrors(serverErrors),
+          ...serverFieldErrors,
         }))
       }
 
-      setFormMessage(getErrorMessage(error))
+      const networkError = error instanceof ApiError && error.kind === "NETWORK_ERROR"
+      setFormMessage(networkError
+        ? "가입 결과를 확인하지 못했습니다. 이미 가입되었을 수 있으니 로그인 가능 여부를 확인한 뒤 다시 시도해 주세요."
+        : getErrorMessage(error))
+      setCanRetry(networkError)
+      if (Object.keys(serverFieldErrors).length > 0) focusFirstError(serverFieldErrors)
+      else window.requestAnimationFrame(() => formErrorRef.current?.focus())
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function focusFirstError(errors: FieldErrors) {
+    const first = (["email", "name", "nickname", "password", "passwordConfirm", "termsAccepted"] as const)
+      .find((field) => Boolean(errors[field]))
+    if (first) fieldRefs.current[first]?.focus()
   }
 
   return (
@@ -190,13 +227,14 @@ export function SignupForm() {
           이메일
         </label>
 
-        <div className="flex gap-2">
+        <div className="signup-email-row flex gap-2">
           <div
             data-invalid={Boolean(fieldErrors.email) || undefined}
             className={getInputGroupClassName(Boolean(fieldErrors.email))}
           >
             <Mail className="size-4 text-neutral-400" />
             <input
+              ref={(node) => { fieldRefs.current.email = node }}
               id="email"
               name="email"
               type="email"
@@ -217,7 +255,7 @@ export function SignupForm() {
             disabled={emailCheckStatus === "checking" || isSubmitting}
             onClick={handleEmailCheck}
           >
-            {emailCheckStatus === "checking" ? "확인 중" : "중복 확인"}
+            {emailCheckStatus === "checking" ? "확인 중" : emailCheckFailed ? "다시 확인" : "중복 확인"}
           </Button>
         </div>
 
@@ -249,6 +287,7 @@ export function SignupForm() {
         >
           <User className="size-4 text-neutral-400" />
           <input
+            ref={(node) => { fieldRefs.current.name = node }}
             id="name"
             name="name"
             type="text"
@@ -285,6 +324,7 @@ export function SignupForm() {
         >
           <AtSign className="size-4 text-neutral-400" />
           <input
+            ref={(node) => { fieldRefs.current.nickname = node }}
             id="nickname"
             name="nickname"
             type="text"
@@ -323,9 +363,10 @@ export function SignupForm() {
         >
           <Lock className="size-4 text-neutral-400" />
           <input
+            ref={(node) => { fieldRefs.current.password = node }}
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             value={password}
             minLength={8}
@@ -338,6 +379,12 @@ export function SignupForm() {
               fieldErrors.password ? "password-error" : undefined
             }
             onChange={handleInputChange}
+          />
+          <PasswordVisibilityButton
+            inputId="password"
+            label="비밀번호"
+            visible={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
           />
         </div>
 
@@ -364,9 +411,10 @@ export function SignupForm() {
         >
           <ShieldCheck className="size-4 text-neutral-400" />
           <input
+            ref={(node) => { fieldRefs.current.passwordConfirm = node }}
             id="passwordConfirm"
             name="passwordConfirm"
-            type="password"
+            type={showPasswordConfirm ? "text" : "password"}
             required
             value={passwordConfirm}
             minLength={8}
@@ -379,6 +427,12 @@ export function SignupForm() {
               fieldErrors.passwordConfirm ? "password-confirm-error" : undefined
             }
             onChange={handleInputChange}
+          />
+          <PasswordVisibilityButton
+            inputId="passwordConfirm"
+            label="비밀번호 확인"
+            visible={showPasswordConfirm}
+            onToggle={() => setShowPasswordConfirm((value) => !value)}
           />
         </div>
 
@@ -396,8 +450,10 @@ export function SignupForm() {
           fieldErrors.termsAccepted ? "border-red-300" : "border-neutral-200"
         )}
       >
-        <label className="flex gap-3">
+        <label className="flex items-start gap-3" htmlFor="termsAccepted">
           <input
+            ref={(node) => { fieldRefs.current.termsAccepted = node }}
+            id="termsAccepted"
             name="termsAccepted"
             type="checkbox"
             required
@@ -409,23 +465,14 @@ export function SignupForm() {
             }
             onChange={handleInputChange}
           />
-          <span>
-            <span className="font-medium text-neutral-950">
-              필수 약관에 동의합니다.
-            </span>
-            <span className="mt-1 block leading-6 text-neutral-600">
-              CoffeeProd의{" "}
-              <Link href="/terms" className="font-medium text-neutral-950">
-                이용약관
-              </Link>
-              과{" "}
-              <Link href="/privacy" className="font-medium text-neutral-950">
-                개인정보처리방침
-              </Link>
-              을 확인했습니다.
-            </span>
-          </span>
+          <span className="font-medium text-neutral-950">필수 약관에 동의합니다.</span>
         </label>
+        <p className="mt-2 pl-7 text-sm leading-6 text-neutral-600">
+          <Link href="/terms" target="_blank" rel="noopener noreferrer" aria-label="이용약관 새 탭에서 보기" className="font-medium text-neutral-950 underline underline-offset-2">이용약관</Link>
+          과{" "}
+          <Link href="/privacy" target="_blank" rel="noopener noreferrer" aria-label="개인정보처리방침 새 탭에서 보기" className="font-medium text-neutral-950 underline underline-offset-2">개인정보처리방침</Link>
+          을 새 탭에서 확인할 수 있습니다.
+        </p>
 
         {fieldErrors.termsAccepted && (
           <p id="terms-error" className={fieldErrorClassName}>
@@ -436,6 +483,8 @@ export function SignupForm() {
 
       {formMessage && (
         <p
+          ref={formErrorRef}
+          tabIndex={-1}
           className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
           role="alert"
         >
@@ -444,7 +493,7 @@ export function SignupForm() {
       )}
 
       <Button type="submit" className="mt-2 w-full" disabled={isBusy}>
-        {isSubmitting ? "가입 중" : "회원가입"}
+        {isSubmitting ? "가입 중" : canRetry ? "다시 시도" : "회원가입"}
       </Button>
     </form>
   )

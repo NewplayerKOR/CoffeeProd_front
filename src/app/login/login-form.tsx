@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { Lock, Mail } from "lucide-react"
-import { type ChangeEvent, type FormEvent, useState } from "react"
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react"
 
+import { PasswordVisibilityButton } from "@/components/password-visibility-button"
 import { Button } from "@/components/ui/button"
 import { login } from "@/lib/api/auth"
 import { setStoredAuthTokens } from "@/lib/api/auth-token-storage"
@@ -44,6 +45,11 @@ export function LoginForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formMessage, setFormMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [canRetry, setCanRetry] = useState(false)
+  const emailRef = useRef<HTMLInputElement>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
 
   const email = formData.email
   const password = formData.password
@@ -61,6 +67,7 @@ export function LoginForm({
       [field]: undefined,
     }))
     setFormMessage(null)
+    setCanRetry(false)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -75,6 +82,8 @@ export function LoginForm({
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
       setFormMessage("입력 값을 다시 확인해 주세요.")
+      const firstInvalidRef = nextErrors.email ? emailRef : passwordRef
+      firstInvalidRef.current?.focus()
       return
     }
 
@@ -91,15 +100,22 @@ export function LoginForm({
       router.replace(redirectTo)
     } catch (error) {
       const serverErrors = error instanceof ApiError ? error.errors : null
+      const serverFieldErrors = serverErrors?.length
+        ? toLoginFieldErrors(serverErrors)
+        : {}
 
-      if (serverErrors?.length) {
+      if (Object.keys(serverFieldErrors).length > 0) {
         setFieldErrors((current) => ({
           ...current,
-          ...toLoginFieldErrors(serverErrors),
+          ...serverFieldErrors,
         }))
       }
 
       setFormMessage(getErrorMessage(error))
+      setCanRetry(error instanceof ApiError && error.kind === "NETWORK_ERROR")
+      if (serverFieldErrors.email) emailRef.current?.focus()
+      else if (serverFieldErrors.password) passwordRef.current?.focus()
+      else window.requestAnimationFrame(() => formErrorRef.current?.focus())
     } finally {
       setIsSubmitting(false)
     }
@@ -128,6 +144,7 @@ export function LoginForm({
           >
             <Mail className="size-4 text-neutral-400" />
             <input
+              ref={emailRef}
               id="email"
               name="email"
               type="email"
@@ -163,9 +180,10 @@ export function LoginForm({
           >
             <Lock className="size-4 text-neutral-400" />
             <input
+              ref={passwordRef}
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               value={password}
               placeholder="비밀번호를 입력하세요"
@@ -177,6 +195,12 @@ export function LoginForm({
               }
               onChange={handleInputChange}
             />
+            <PasswordVisibilityButton
+              inputId="password"
+              label="비밀번호"
+              visible={showPassword}
+              onToggle={() => setShowPassword((value) => !value)}
+            />
           </div>
 
           {fieldErrors.password && (
@@ -184,10 +208,15 @@ export function LoginForm({
               {fieldErrors.password}
             </p>
           )}
+          <p className="mt-2 text-xs leading-5 text-neutral-500">
+            비밀번호 재설정은 현재 지원하지 않습니다. 계정에 접근할 수 없다면 사이트 운영자에게 문의해 주세요.
+          </p>
         </div>
 
         {formMessage && (
           <p
+            ref={formErrorRef}
+            tabIndex={-1}
             className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
             role="alert"
           >
@@ -196,7 +225,7 @@ export function LoginForm({
         )}
 
         <Button type="submit" className="mt-2 w-full" disabled={isSubmitting}>
-          {isSubmitting ? "로그인 중" : "로그인"}
+          {isSubmitting ? "로그인 중" : canRetry ? "다시 시도" : "로그인"}
         </Button>
       </form>
     </>

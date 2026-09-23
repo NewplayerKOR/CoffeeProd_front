@@ -105,13 +105,13 @@ export function PaymentConfirmView({
       setMessage(null)
 
       if (!window.TossPayments) {
-        setMessage("Toss Payments SDK를 불러오지 못했습니다.")
+        setMessage("결제수단을 불러오지 못했습니다. 페이지를 새로고침해 주세요.")
         return
       }
 
       if (!tossWidgetClientKey) {
         setMessage(
-          "Toss 결제위젯 클라이언트 키가 없습니다. TOSS_WIDGET_CLIENT_KEY 또는 TOSS_CLIENT_KEY를 설정해 주세요."
+          "현재 결제를 이용할 수 없습니다. 잠시 후 주문 내역에서 다시 시도해 주세요."
         )
         return
       }
@@ -149,7 +149,7 @@ export function PaymentConfirmView({
         setWidgetReady(true)
       } catch {
         setMessage(
-          "결제위젯을 준비하지 못했습니다. Toss 클라이언트 키와 위젯 설정을 확인해 주세요."
+          "결제수단을 준비하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요."
         )
       }
     }
@@ -179,7 +179,7 @@ export function PaymentConfirmView({
     }
 
     if (!widgetsRef.current || !widgetReady) {
-      setMessage("결제위젯 준비가 끝난 뒤 다시 시도해 주세요.")
+      setMessage("결제수단을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.")
       return
     }
 
@@ -205,7 +205,7 @@ export function PaymentConfirmView({
         src={TOSS_SDK_URL}
         strategy="afterInteractive"
         onReady={() => setSdkReady(true)}
-        onError={() => setMessage("Toss Payments SDK 로딩에 실패했습니다.")}
+        onError={() => setMessage("결제수단을 불러오지 못했습니다. 페이지를 새로고침해 주세요.")}
       />
 
       <div className="mx-auto w-full max-w-6xl px-6 py-8">
@@ -229,10 +229,9 @@ export function PaymentConfirmView({
               <p className="text-sm font-medium text-neutral-500">
                 Toss Payments
               </p>
-              <h1 className="mt-2 text-3xl font-bold">결제위젯으로 결제</h1>
+              <h1 className="mt-2 text-3xl font-bold">결제하기</h1>
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                Toss Payments SDK가 결제수단과 약관 UI를 직접 렌더링합니다.
-                테스트 키를 사용하는 동안 실제 청구는 발생하지 않습니다.
+                결제 금액을 확인하고 결제수단을 선택해 주세요.
               </p>
             </div>
 
@@ -242,7 +241,7 @@ export function PaymentConfirmView({
                 {!widgetReady && hasOrder && (
                   <span className="flex items-center gap-2 text-sm font-medium text-neutral-500">
                     <LoaderCircle className="size-4 animate-spin" />
-                    위젯 준비 중
+                    결제수단 준비 중
                   </span>
                 )}
               </div>
@@ -278,17 +277,8 @@ export function PaymentConfirmView({
               <dl className="mt-5 flex flex-col gap-3 border-y border-neutral-200 py-4 text-sm">
                 <SummaryRow label="주문 번호" value={String(orderId)} />
                 <SummaryRow
-                  label="Toss 주문 ID"
-                  value={tossOrderId}
-                  truncate
-                />
-                <SummaryRow
                   label="결제 금액"
                   value={`${amount.toLocaleString()}원`}
-                />
-                <SummaryRow
-                  label="위젯 키"
-                  value={tossWidgetClientKey ? "설정됨" : "미설정"}
                 />
               </dl>
             ) : (
@@ -322,8 +312,8 @@ export function PaymentConfirmView({
 
             <div className="mt-5 flex items-start gap-2 rounded-lg bg-neutral-50 p-3 text-xs leading-5 text-neutral-600">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-              결제 성공 후 Toss 리다이렉트 값을 받아 백엔드 결제 승인 API를
-              호출합니다. 실제 승인 검증은 서버에서 처리되어야 합니다.
+              결제가 완료되면 결과를 안내합니다. 결제를 중단한 주문은
+              주문 내역에서 다시 결제하거나 취소할 수 있습니다.
             </div>
           </aside>
         </div>

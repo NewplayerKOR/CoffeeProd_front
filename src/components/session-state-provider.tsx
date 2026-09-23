@@ -19,8 +19,9 @@ import {
 } from "@/lib/api/auth-token-storage"
 import { CART_CHANGED_EVENT, getCart, type Cart } from "@/lib/api/cart"
 import { AUTH_EXPIRED_EVENT } from "@/lib/api/client"
+import { ApiError } from "@/lib/api/types"
 
-type SessionStatus = "checking" | "guest" | "authenticated"
+type SessionStatus = "checking" | "guest" | "error" | "authenticated"
 type CartStatus = "idle" | "checking" | "ready" | "error"
 
 type SessionState = {
@@ -79,8 +80,15 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
     ])
 
     if (memberResult.status === "rejected") {
-      clearStoredAuthTokens()
-      resetSession()
+      if (memberResult.reason instanceof ApiError && memberResult.reason.kind === "UNAUTHORIZED") {
+        clearStoredAuthTokens()
+        resetSession()
+      } else {
+        setStatus("error")
+        setMember(null)
+        setCartStatus("error")
+        setCartError("로그인 상태를 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.")
+      }
       return
     }
 

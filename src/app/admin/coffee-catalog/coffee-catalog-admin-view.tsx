@@ -467,7 +467,7 @@ export function CoffeeCatalogAdminView() {
               </span>
             </div>
             <p className="mt-2 text-xs text-neutral-500">
-              현재 백엔드 계약은 기준정보 생성과 수정만 제공합니다.
+              기준정보를 추가하거나 수정할 수 있습니다. 삭제는 지원하지 않습니다.
             </p>
             <div className="mt-5 flex flex-col gap-2">
               {activeReferences.map((reference) => (

@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import { Check, FolderTree, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react"
@@ -154,6 +155,7 @@ export function AdminCategoriesView() {
   }
 
   async function handleDelete(category: Category) {
+    if (!(await confirmAction("선택한 카테고리를 삭제할까요? 삭제 후에는 복구할 수 없습니다."))) return
     setPendingCategoryId(category.id)
     setMessage(null)
 

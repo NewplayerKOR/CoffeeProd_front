@@ -25,7 +25,7 @@ function ListSkeleton() {
   return (
     <div className="mt-12">
       <div className="h-12 w-full border-y border-neutral-200 bg-white" />
-      <div className="mt-8 grid grid-cols-2 gap-px bg-neutral-200 md:grid-cols-3 lg:grid-cols-4">
+      <div className="catalog-loading-grid mt-8 grid grid-cols-2 gap-px bg-neutral-200 md:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }, (_, index) => (
           <div key={index} className="bg-white">
             <div className="aspect-square bg-neutral-200 md:aspect-[4/3]" />

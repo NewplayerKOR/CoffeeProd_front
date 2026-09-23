@@ -2,18 +2,19 @@
 
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { ShieldAlert, ShieldCheck } from "lucide-react"
+import { RotateCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { getAdminMembers } from "@/lib/api/admin"
 import { getMe } from "@/lib/api/auth"
+import { ApiError } from "@/lib/api/types"
 import {
   clearStoredAuthTokens,
   getStoredAuthTokens,
 } from "@/lib/api/auth-token-storage"
 
-type AdminAuthStatus = "checking" | "guest" | "denied" | "ready"
+type AdminAuthStatus = "checking" | "guest" | "denied" | "error" | "ready"
 
 type AdminAuthGuardProps = {
   children: ReactNode
@@ -21,6 +22,7 @@ type AdminAuthGuardProps = {
 
 export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
   const [status, setStatus] = useState<AdminAuthStatus>("checking")
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let isActive = true
@@ -53,14 +55,26 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
         try {
           await getAdminMembers({ page: 0, size: 1 })
           setStatus("ready")
-        } catch {
-          setStatus("denied")
+        } catch (error) {
+          if (!isActive) return
+          if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
+            clearStoredAuthTokens()
+            setStatus("guest")
+          } else if (error instanceof ApiError && error.kind === "FORBIDDEN") {
+            setStatus("denied")
+          } else {
+            setStatus("error")
+          }
         }
-      } catch {
-        clearStoredAuthTokens()
-
-        if (isActive) {
+      } catch (error) {
+        if (!isActive) return
+        if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
+          clearStoredAuthTokens()
           setStatus("guest")
+        } else if (error instanceof ApiError && error.kind === "FORBIDDEN") {
+          setStatus("denied")
+        } else {
+          setStatus("error")
         }
       }
     }
@@ -70,11 +84,11 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [retryCount])
 
   if (status === "checking") {
     return (
-      <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600 shadow-sm">
+      <section className="max-w-xl border-t border-neutral-200 pt-7 text-sm text-neutral-600" aria-live="polite">
         관리자 권한을 확인하고 있습니다.
       </section>
     )
@@ -82,11 +96,8 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
 
   if (status === "guest") {
     return (
-      <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-          <ShieldAlert className="size-6 text-neutral-500" />
-        </div>
-        <h2 className="mt-5 text-2xl font-bold">로그인이 필요합니다</h2>
+      <section className="max-w-xl border-t border-neutral-200 pt-7">
+        <h2 className="text-2xl font-bold">로그인이 필요합니다</h2>
         <p className="mt-3 text-sm text-neutral-600">
           관리자 화면은 관리자 계정으로 로그인한 뒤 이용할 수 있습니다.
         </p>
@@ -99,11 +110,8 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
 
   if (status === "denied") {
     return (
-      <section className="rounded-lg border border-red-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50">
-          <ShieldAlert className="size-6 text-red-600" />
-        </div>
-        <h2 className="mt-5 text-2xl font-bold">접근 권한이 없습니다</h2>
+      <section className="max-w-xl border-t border-red-300 pt-7">
+        <h2 className="text-2xl font-bold">접근 권한이 없습니다</h2>
         <p className="mt-3 text-sm text-neutral-600">
           관리자 권한이 있는 계정으로 다시 로그인해 주세요.
         </p>
@@ -114,13 +122,17 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
     )
   }
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-600 shadow-sm">
-        <ShieldCheck className="size-5 text-neutral-500" />
-        관리자 API 요청은 현재 로그인된 access token으로 전송됩니다.
-      </div>
-      {children}
-    </div>
-  )
+  if (status === "error") {
+    return (
+      <section className="max-w-xl border-t border-red-300 pt-7" role="alert">
+        <h2 className="text-2xl font-bold">권한을 확인하지 못했습니다</h2>
+        <p className="mt-3 text-sm text-neutral-600">연결을 확인한 뒤 다시 시도해 주세요. 로그인 상태는 유지됩니다.</p>
+        <Button type="button" variant="outline" className="mt-6" onClick={() => { setStatus("checking"); setRetryCount((value) => value + 1) }}>
+          <RotateCw data-icon="inline-start" /> 다시 시도
+        </Button>
+      </section>
+    )
+  }
+
+  return <>{children}</>
 }

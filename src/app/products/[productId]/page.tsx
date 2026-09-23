@@ -2,11 +2,11 @@ import Link from "next/link"
 import {
   ArrowLeft,
   PackageCheck,
-  PackageX,
   Truck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { RetryRouteButton } from "@/components/retry-route-button"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -77,18 +77,16 @@ export default async function ProductDetailPage({
           </Link>
         </Button>
 
-        <section className="mt-8 rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-            <PackageX className="size-6 text-neutral-500" />
-          </div>
-          <h1 className="mt-5 text-2xl font-bold">
+        <section className="mt-8 max-w-xl border-t border-neutral-200 pt-8">
+          <h1 className="text-2xl font-bold">
             {productState.notFound
               ? "상품을 찾을 수 없습니다."
               : "상품 정보를 불러오지 못했습니다."}
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-neutral-600">
+          <p className="mt-3 text-sm leading-6 text-neutral-600">
             {productState.errorMessage}
           </p>
+          {!productState.notFound && <div className="mt-5"><RetryRouteButton /></div>}
         </section>
       </ProductDetailShell>
     )
@@ -217,9 +215,9 @@ export default async function ProductDetailPage({
 
 function ProductDetailShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-neutral-50 text-neutral-950">
+    <main className="flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <SiteHeader />
-      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
         {children}
       </div>
       <SiteFooter />

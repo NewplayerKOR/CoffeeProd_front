@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 
 import { SessionStateProvider } from "@/components/session-state-provider"
+import { ConfirmActionDialog } from "@/components/confirm-action"
+import { SkipToContent } from "@/components/navigation-link"
 
 import "./globals.css"
 
@@ -50,6 +52,8 @@ try {
         />
       </head>
       <body className="flex min-h-dvh flex-col">
+        <SkipToContent />
+        <ConfirmActionDialog />
         <SessionStateProvider>
           <div className="flex flex-1 flex-col">{children}</div>
         </SessionStateProvider>

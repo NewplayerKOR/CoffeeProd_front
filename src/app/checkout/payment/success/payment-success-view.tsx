@@ -93,7 +93,7 @@ export function PaymentSuccessView({
         ) : (
           <p className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm font-medium text-neutral-600">
             <LoaderCircle className="size-4 animate-spin" />
-            결제 인증 결과를 백엔드 승인 API로 확인하고 있습니다.
+            결제 결과를 확인하고 있습니다. 잠시만 기다려 주세요.
           </p>
         )}
 

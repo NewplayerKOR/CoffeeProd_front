@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -7,13 +8,13 @@ import {
   ArrowRight,
   CreditCard,
   Home,
-  Package,
-  ReceiptText,
   RotateCcw,
+  RotateCw,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { SiteFooter } from "@/components/site-footer"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
   cancelOrder,
@@ -45,6 +46,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
   const [paymentResumeOrderId, setPaymentResumeOrderId] = useState<number | null>(
     null
   )
+  const [retryCount, setRetryCount] = useState(0)
   const pendingOrders =
     orders?.content.filter((order) => order.status === "PENDING") ?? []
 
@@ -82,6 +84,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
         }
 
         if (isActive) {
+          setOrders(null)
           setMessage(getOrderErrorMessage(error))
           setStatus("ready")
         }
@@ -93,7 +96,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
     return () => {
       isActive = false
     }
-  }, [page])
+  }, [page, retryCount])
 
   function movePage(nextPage: number) {
     const safePage = Math.max(nextPage, 0)
@@ -103,6 +106,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
   }
 
   async function handleCancelOrder(orderId: number) {
+    if (!(await confirmAction("이 주문을 취소할까요? 취소 후에는 이 주문으로 결제를 이어갈 수 없습니다."))) return
     setPendingOrderId(orderId)
     setMessage(null)
 
@@ -149,8 +153,8 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
   }
 
   return (
-    <main className="order-page min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
+    <main className="order-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         <header className="mb-8 flex items-center justify-between border-b border-neutral-200 pb-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <Home className="size-5" />
@@ -175,11 +179,8 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
         </section>
 
         {status === "guest" && (
-          <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-              <ReceiptText className="size-6 text-neutral-500" />
-            </div>
-            <h2 className="mt-5 text-2xl font-bold">로그인이 필요합니다.</h2>
+          <section className="max-w-xl border-t border-neutral-200 pt-6">
+            <h2 className="text-2xl font-bold">로그인이 필요합니다.</h2>
             <p className="mt-3 text-sm text-neutral-600">
               주문 내역은 로그인 후 확인할 수 있습니다.
             </p>
@@ -190,7 +191,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
         )}
 
         {status === "checking" && (
-          <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600 shadow-sm">
+          <section className="max-w-xl border-t border-neutral-200 pt-6 text-sm text-neutral-600" aria-live="polite">
             주문 내역을 확인하고 있습니다.
           </section>
         )}
@@ -198,12 +199,12 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
         {status === "ready" && (
           <section className="flex flex-col gap-4">
             {message && (
-              <p
-                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
-                role="alert"
-              >
-                {message}
-              </p>
+              <div className="border-l-2 border-red-500 py-2 pl-4" role="alert">
+                <p className="text-sm text-red-700">{message}</p>
+                {!orders && <Button type="button" variant="outline" className="mt-4" onClick={() => { setStatus("checking"); setRetryCount((value) => value + 1) }}>
+                  <RotateCw data-icon="inline-start" /> 다시 시도
+                </Button>}
+              </div>
             )}
 
             {pendingOrders.length > 0 && (
@@ -212,18 +213,15 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
                   결제 대기 주문이 {pendingOrders.length}건 있습니다.
                 </p>
                 <p className="mt-1">
-                  주문 생성 후 결제를 완료하지 않은 상태입니다. 아래 주문에서
+                  결제가 완료되지 않은 주문입니다. 아래 주문에서
                   결제를 재개하거나 주문을 취소할 수 있습니다.
                 </p>
               </div>
             )}
 
             {orders?.content.length === 0 && (
-              <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-                <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-                  <Package className="size-6 text-neutral-500" />
-                </div>
-                <h2 className="mt-5 text-xl font-bold">
+              <div className="max-w-xl border-t border-neutral-200 pt-6">
+                <h2 className="text-xl font-bold">
                   아직 주문 내역이 없습니다.
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
@@ -340,6 +338,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
           </section>
         )}
       </div>
+      <SiteFooter />
     </main>
   )
 }

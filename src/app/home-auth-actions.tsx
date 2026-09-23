@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { LogOut, UserRound } from "lucide-react"
+import { LogOut, RotateCw, UserRound } from "lucide-react"
 import { useState } from "react"
 
 import { useSessionState } from "@/components/session-state-provider"
@@ -12,7 +12,7 @@ import { clearStoredAuthTokens } from "@/lib/api/auth-token-storage"
 
 export function HomeAuthActions({ compact = false }: { compact?: boolean }) {
   const router = useRouter()
-  const { status, member } = useSessionState()
+  const { status, member, refreshSession } = useSessionState()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   async function handleLogout() {
@@ -34,6 +34,15 @@ export function HomeAuthActions({ compact = false }: { compact?: boolean }) {
       <Button variant={compact ? "ghost" : "outline"} size={compact ? "icon" : "default"} disabled>
         <UserRound />
         <span className={compact ? "sr-only" : undefined}>인증 확인 중</span>
+      </Button>
+    )
+  }
+
+  if (status === "error") {
+    return (
+      <Button variant="outline" size={compact ? "icon" : "default"} onClick={() => void refreshSession()} title="로그인 상태 다시 확인">
+        <RotateCw data-icon={compact ? undefined : "inline-start"} />
+        <span className={compact ? "sr-only" : undefined}>다시 시도</span>
       </Button>
     )
   }

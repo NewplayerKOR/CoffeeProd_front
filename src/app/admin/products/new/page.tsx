@@ -11,7 +11,7 @@ export default function AdminProductNewPage() {
     <AdminPageShell
       eyebrow="Admin / Products"
       title="상품 등록"
-      description="관리자 상품 등록 API에 맞춰 image_url 필드를 포함한 상품 정보를 저장합니다."
+      description="상품 정보와 이미지를 입력해 새 상품을 등록합니다."
       actions={
         <Button variant="outline" asChild>
           <Link href="/admin/products">

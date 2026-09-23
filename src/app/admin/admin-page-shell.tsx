@@ -21,8 +21,8 @@ export function AdminPageShell({
   children,
 }: AdminPageShellProps) {
   return (
-    <main className="admin-shell min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="mx-auto w-full max-w-[1320px] px-6 py-10">
+    <main className="admin-shell flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-10">
         <header className="admin-header mb-12 flex flex-col gap-4 border-b border-neutral-200 pb-5 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="site-wordmark flex items-baseline gap-3">
             CoffeeProd
@@ -61,6 +61,9 @@ export function AdminPageShell({
 
         {children}
       </div>
+      <footer className="border-t border-neutral-200 px-6 py-5 text-center text-xs text-neutral-500">
+        © CoffeeProd
+      </footer>
     </main>
   )
 }

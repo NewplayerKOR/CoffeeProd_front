@@ -8,6 +8,7 @@ import {
 
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { RetryRouteButton } from "@/components/retry-route-button"
 import { Button } from "@/components/ui/button"
 import {
   getCategories,
@@ -28,6 +29,8 @@ import type { PageResponse } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 import { ProductImage } from "./product-image"
+import { ProductFilterControls } from "./product-filter-controls"
+import { ProductResultsFocus } from "./product-results-focus"
 
 const roastLevelOptions = [
   { value: "LIGHT", label: "라이트" },
@@ -68,6 +71,7 @@ type ProductListState = {
   activeCoffeeProfile: CoffeeProfile | null
   products: PageResponse<ProductListItem> | null
   categoriesError: string | null
+  processingMethodsError: string | null
   productsError: string | null
 }
 
@@ -76,11 +80,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const filters = parseProductFilters(rawSearchParams)
   const listState = await loadProductList(filters.apiParams)
   const products = listState.products?.content ?? []
+  const hasActiveFilters = Boolean(
+    filters.keyword ||
+    filters.categoryId !== undefined ||
+    filters.coffeeProfileId !== undefined ||
+    filters.processingMethodId !== undefined ||
+    filters.beanType ||
+    filters.decaf !== undefined ||
+    filters.roastLevel
+  )
 
   return (
-    <main className="catalog-page min-h-screen bg-neutral-50 text-neutral-950">
+    <main className="catalog-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <SiteHeader />
-      <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
+      <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
         <section className="catalog-intro mb-10">
           <p className="editorial-kicker">Coffee collection</p>
           <h1 className="mt-3 text-4xl font-bold">오늘의 원두를 고르세요</h1>
@@ -145,15 +158,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             </div>
 
             <Button type="submit">검색</Button>
-            {(filters.keyword ||
-              filters.categoryId !== undefined ||
-              filters.coffeeProfileId !== undefined ||
-              filters.processingMethodId !== undefined ||
-              filters.beanType ||
-              filters.decaf !== undefined ||
-              filters.roastLevel) && (
+            {hasActiveFilters && (
               <Button type="button" variant="outline" asChild>
-                <Link href={buildProductsHref({ sort: filters.sort })}>
+                <Link href={clearProductFiltersHref(filters.urlParams)}>
                   초기화
                 </Link>
               </Button>
@@ -161,11 +168,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </form>
         </section>
 
-        <details className="catalog-filters mb-8 border-b border-neutral-200 pb-6">
+        <details className="catalog-filters catalog-desktop-filters mb-8 border-b border-neutral-200 pb-6">
           <summary>
             <span>
               <SlidersHorizontal />
-              필터 및 정렬
+              필터
             </span>
             <span>열기</span>
           </summary>
@@ -193,10 +200,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </FilterLink>
             ))}
           </FilterGroup>
-
-          {listState.categoriesError && (
-            <p className="text-sm text-red-600">{listState.categoriesError}</p>
-          )}
 
           {filters.coffeeProfileId !== undefined && (
             <FilterGroup label="커피 프로필">
@@ -322,45 +325,50 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             ))}
           </FilterGroup>
 
-            <FilterGroup label="정렬">
-              {sortOptions.map((option) => (
-                <FilterLink
-                  key={option.value}
-                  href={buildProductsHref(filters.urlParams, {
-                    sort: option.value,
-                    page: undefined,
-                  })}
-                  active={filters.sort === option.value}
-                >
-                  {option.label}
-                </FilterLink>
-              ))}
-            </FilterGroup>
           </div>
         </details>
 
-        <section className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-neutral-600">
-            총{" "}
-            <span className="font-semibold text-neutral-950">
-              {listState.products?.totalElements ?? 0}
-            </span>
-            개 상품
-          </p>
+        <ProductFilterControls
+          key={JSON.stringify(filters.urlParams)}
+          params={filters.urlParams}
+          categories={listState.categories}
+          methods={listState.processingMethods}
+          profileName={listState.activeCoffeeProfile?.profileName ?? null}
+          total={listState.products?.totalElements ?? null}
+        />
 
-          <p className="text-sm text-neutral-500">
-            {filters.page + 1} / {Math.max(listState.products?.totalPages ?? 1, 1)}
-            페이지
-          </p>
-        </section>
-
-        {listState.productsError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-            {listState.productsError}
+        {(listState.categoriesError || listState.processingMethodsError) && (
+          <div className="mb-5 flex flex-wrap items-center gap-3 border-l-2 border-amber-500 py-2 pl-4 text-sm" role="alert">
+            <p>일부 필터를 불러오지 못했습니다. 다시 시도해 주세요.</p>
+            <RetryRouteButton />
           </div>
         )}
 
-        <section className="catalog-grid grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+        <section className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          {listState.products ? (
+            <>
+              <p className="text-sm text-neutral-600">
+                총 <span className="font-semibold text-neutral-950">{listState.products.totalElements}</span>개 상품
+              </p>
+              <p className="text-sm text-neutral-500">
+                {filters.page + 1} / {Math.max(listState.products.totalPages, 1)}페이지
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-neutral-600">상품 수를 확인할 수 없습니다.</p>
+          )}
+        </section>
+
+        {listState.productsError && (
+          <section className="mb-6 border-l-2 border-red-500 py-2 pl-4" role="alert">
+            <h2 className="text-lg font-semibold">상품을 불러오지 못했습니다.</h2>
+            <p className="mt-1 text-sm text-neutral-600">{listState.productsError}</p>
+            <div className="mt-4"><RetryRouteButton /></div>
+          </section>
+        )}
+
+        {!listState.productsError && <ProductResultsFocus page={filters.page} />}
+        {!listState.productsError && <section id="catalog-results" tabIndex={-1} className="catalog-grid grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
           {products.map((product, index) => (
             <Link
               key={product.id}
@@ -377,25 +385,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 />
               </div>
 
-              <div className="flex min-h-36 flex-col p-3 md:min-h-52 md:p-5">
+              <div className="catalog-card-copy flex min-h-36 flex-col p-3 md:min-h-52 md:p-5">
                 <div className="mb-2 flex min-w-0 flex-wrap items-center gap-1 md:mb-3 md:gap-2">
-                  <span className="max-w-full truncate rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600 md:px-2.5 md:py-1 md:text-xs">
+                  <span className="catalog-card-category max-w-full rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 md:px-2.5 md:py-1">
                     {product.categoryName}
-                  </span>
-                  <span className="hidden rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600 sm:inline-flex">
-                    {getRoastLevelLabel(product.roastLevel)}
                   </span>
                 </div>
 
-                <h2 className="mobile-line-clamp-2 text-sm font-semibold leading-5 md:text-lg">
+                <h2 className="mobile-line-clamp-2 catalog-card-title text-sm font-semibold leading-5 md:text-lg">
                   {product.name}
                 </h2>
-                <p className="mt-1 truncate text-xs text-neutral-500 md:text-sm">
-                  {product.coffeeProfileName || product.sku} · {product.weightGrams}g
+                <p className="catalog-card-profile mt-1 text-xs text-neutral-500 md:text-sm">
+                  {product.coffeeProfileName || product.sku}
+                </p>
+                <p className="catalog-card-variant mt-1 text-xs text-neutral-500 md:text-sm">
+                  {getRoastLevelLabel(product.roastLevel)} · {product.weightGrams}g
                 </p>
 
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4 md:gap-3 md:pt-5">
-                  <span className="text-sm font-bold md:text-base">
+                  <span className="catalog-card-price text-sm font-bold md:text-base">
                     {product.price.toLocaleString()}원
                   </span>
                   <span className="hidden text-sm font-medium text-neutral-500 group-hover:text-neutral-950 sm:inline">
@@ -405,17 +413,23 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </div>
             </Link>
           ))}
-        </section>
+        </section>}
 
         {products.length === 0 && !listState.productsError && (
-          <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600">
-            조건에 맞는 상품이 없습니다.
-          </div>
+          <section className="border-t border-neutral-200 py-8">
+            <h2 className="text-xl font-semibold">{hasActiveFilters ? "조건에 맞는 상품이 없습니다." : "아직 둘러볼 상품이 없습니다."}</h2>
+            <p className="mt-2 text-sm text-neutral-600">{hasActiveFilters ? "검색어나 필터 조건을 바꿔 보세요." : "새 상품이 등록되면 이곳에서 만나볼 수 있습니다."}</p>
+            <Button className="mt-5" variant="outline" asChild>
+              <Link href={hasActiveFilters ? clearProductFiltersHref(filters.urlParams) : "/"}>
+                {hasActiveFilters ? "조건 초기화" : "메인으로 이동"}
+              </Link>
+            </Button>
+          </section>
         )}
 
         {listState.products && listState.products.totalPages > 1 && (
           <nav
-            className="mt-8 flex items-center justify-center gap-2"
+            className="catalog-pagination mt-8 flex items-center justify-center gap-2"
             aria-label="상품 목록 페이지"
           >
             <Button
@@ -430,9 +444,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 </span>
               ) : (
                 <Link
-                  href={buildProductsHref(filters.urlParams, {
+                  href={`${buildProductsHref(filters.urlParams, {
                     page: String(Math.max(filters.page - 1, 0)),
-                  })}
+                  })}#catalog-results`}
                 >
                   <ArrowLeft data-icon="inline-start" />
                   이전
@@ -444,20 +458,24 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               (pageNumber) => (
                 <Button
                   key={pageNumber}
+                  className="catalog-page-number"
                   variant={pageNumber === filters.page ? "default" : "outline"}
                   size="sm"
                   asChild
                 >
                   <Link
-                    href={buildProductsHref(filters.urlParams, {
+                    href={`${buildProductsHref(filters.urlParams, {
                       page: String(pageNumber),
-                    })}
+                    })}#catalog-results`}
                   >
                     {pageNumber + 1}
                   </Link>
                 </Button>
               )
             )}
+            <span className="catalog-page-status" aria-live="polite">
+              {filters.page + 1} / {listState.products.totalPages}
+            </span>
 
             <Button
               variant="outline"
@@ -471,9 +489,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 </span>
               ) : (
                 <Link
-                  href={buildProductsHref(filters.urlParams, {
+                  href={`${buildProductsHref(filters.urlParams, {
                     page: String(filters.page + 1),
-                  })}
+                  })}#catalog-results`}
                 >
                   다음
                   <ArrowRight data-icon="inline-end" />
@@ -562,9 +580,13 @@ async function loadProductList(
       categoriesResult.status === "rejected"
         ? "카테고리 목록을 불러오지 못했습니다."
         : null,
+    processingMethodsError:
+      processingMethodsResult.status === "rejected"
+        ? "가공 방식 목록을 불러오지 못했습니다."
+        : null,
     productsError:
       productsResult.status === "rejected"
-        ? "상품 목록을 불러오지 못했습니다. 백엔드 서버 상태를 확인해 주세요."
+        ? "상품 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
         : null,
   }
 }
@@ -620,6 +642,9 @@ function parseProductFilters(searchParams: ProductsPageSearchParams) {
   }
 
   const urlParams: Record<string, string | undefined> = {
+    ...Object.fromEntries(
+      Object.entries(searchParams).map(([key, value]) => [key, firstParam(value)])
+    ),
     categoryId: categoryId === undefined ? undefined : String(categoryId),
     coffeeProfileId:
       coffeeProfileId === undefined ? undefined : String(coffeeProfileId),
@@ -685,6 +710,19 @@ function buildProductsHref(
   const queryString = params.toString()
 
   return queryString ? `/products?${queryString}` : "/products"
+}
+
+function clearProductFiltersHref(currentParams: Record<string, string | undefined>) {
+  return buildProductsHref(currentParams, {
+    categoryId: undefined,
+    coffeeProfileId: undefined,
+    processingMethodId: undefined,
+    beanType: undefined,
+    decaf: undefined,
+    roastLevel: undefined,
+    keyword: undefined,
+    page: undefined,
+  })
 }
 
 function firstParam(value: string | string[] | undefined) {

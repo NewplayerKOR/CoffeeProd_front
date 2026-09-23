@@ -1,10 +1,11 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import {
   Minus,
   Plus,
-  ShoppingCart,
+  RotateCw,
   Trash2,
 } from "lucide-react"
 import { useState } from "react"
@@ -38,7 +39,7 @@ const grindOptions = [
   { value: "FRENCH_PRESS", label: "프렌치프레스" },
 ] satisfies Array<{ value: GrindType; label: string }>
 
-type CartStatus = "checking" | "guest" | "ready"
+type CartStatus = "checking" | "guest" | "error" | "ready"
 
 export function CartView() {
   const {
@@ -47,6 +48,7 @@ export function CartView() {
     cartStatus,
     cartError,
     replaceCart,
+    refreshSession,
   } = useSessionState()
   const [pendingItemId, setPendingItemId] = useState<number | null>(null)
   const [isClearing, setIsClearing] = useState(false)
@@ -57,7 +59,9 @@ export function CartView() {
       ? "checking"
       : sessionStatus === "guest"
         ? "guest"
-        : "ready"
+        : sessionStatus === "error" || cartStatus === "error"
+          ? "error"
+          : "ready"
   const hasItems = cart.items.length > 0
   const shippingFee = calculateEstimatedDeliveryFee(cart.totalPrice)
   const orderTotal = cart.totalPrice + shippingFee
@@ -102,6 +106,7 @@ export function CartView() {
   }
 
   async function handleDeleteItem(cartItemId: number) {
+    if (!(await confirmAction("장바구니에서 이 상품을 삭제할까요? 삭제 후 상품을 다시 담을 수 있습니다."))) return
     setPendingItemId(cartItemId)
     setMessage(null)
 
@@ -116,6 +121,7 @@ export function CartView() {
   }
 
   async function handleClearCart() {
+    if (!(await confirmAction("장바구니의 모든 상품을 삭제할까요? 현재 수량과 분쇄 옵션은 복구되지 않습니다."))) return
     setIsClearing(true)
     setMessage(null)
 
@@ -143,28 +149,36 @@ export function CartView() {
         </section>
 
         {status === "checking" && (
-          <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600 shadow-sm">
+          <section className="max-w-xl border-t border-neutral-200 pt-6 text-sm text-neutral-600" aria-live="polite">
             장바구니를 확인하고 있습니다.
           </section>
         )}
 
         {status === "guest" && (
-          <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-              <ShoppingCart className="size-6 text-neutral-500" />
-            </div>
-            <h2 className="mt-5 text-2xl font-bold">로그인이 필요합니다.</h2>
+          <section className="max-w-xl border-t border-neutral-200 pt-6">
+            <h2 className="text-2xl font-bold">로그인이 필요합니다.</h2>
             <p className="mt-3 text-sm text-neutral-600">
               장바구니는 로그인 후 이용할 수 있습니다.
             </p>
-            <Button className="mt-6" asChild>
-              <Link href="/login?redirect=/cart">로그인하기</Link>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button asChild><Link href="/login?redirect=/cart">로그인하기</Link></Button>
+              <Button variant="outline" asChild><Link href="/products">상품 둘러보기</Link></Button>
+            </div>
+          </section>
+        )}
+
+        {status === "error" && (
+          <section className="max-w-xl border-t border-red-300 pt-6" role="alert">
+            <h2 className="text-2xl font-bold">장바구니를 불러오지 못했습니다.</h2>
+            <p className="mt-3 text-sm text-neutral-600">{cartError || "연결을 확인한 뒤 다시 시도해 주세요."}</p>
+            <Button type="button" variant="outline" className="mt-6" onClick={() => void refreshSession()}>
+              <RotateCw data-icon="inline-start" /> 다시 시도
             </Button>
           </section>
         )}
 
         {status === "ready" && (
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section className={hasItems ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]" : "flex flex-col gap-4"}>
             <div className="flex flex-col gap-4">
               {(message || cartError) && (
                 <p
@@ -176,11 +190,8 @@ export function CartView() {
               )}
 
               {!hasItems && (
-                <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
-                  <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
-                    <ShoppingCart className="size-6 text-neutral-500" />
-                  </div>
-                  <h2 className="mt-5 text-xl font-bold">
+                <div className="max-w-xl border-t border-neutral-200 pt-6">
+                  <h2 className="text-xl font-bold">
                     장바구니가 비어 있습니다.
                   </h2>
                   <p className="mt-3 text-sm text-neutral-600">
@@ -313,7 +324,7 @@ export function CartView() {
               })}
             </div>
 
-            <aside className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+            {hasItems && <aside className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold">주문 요약</h2>
               <div className="mt-5 flex flex-col gap-3 border-y border-neutral-200 py-4 text-sm">
                 <SummaryRow
@@ -350,7 +361,7 @@ export function CartView() {
                 <Trash2 data-icon="inline-start" />
                 {isClearing ? "비우는 중" : "장바구니 비우기"}
               </Button>
-            </aside>
+            </aside>}
           </section>
         )}
       </div>

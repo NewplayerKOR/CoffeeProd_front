@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import {
   ArrowLeft,
@@ -152,6 +153,7 @@ export function OrdersAdminView() {
       return
     }
 
+    if (!(await confirmAction(`주문 ${order.orderId}의 상태를 변경할까요? 배송과 주문 처리에 반영되며 현재 상태로 되돌리지 못할 수 있습니다.`))) return
     setPendingOrderId(order.orderId)
     setMessage(null)
 

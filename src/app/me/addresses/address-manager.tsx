@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import Script from "next/script"
@@ -322,6 +323,7 @@ export function AddressManager() {
   }
 
   async function handleDelete(addressId: number) {
+    if (!(await confirmAction("이 배송지를 삭제할까요? 삭제한 배송지는 복구되지 않으며 다시 등록해야 합니다."))) return
     setPendingAddressId(addressId)
     setMessage(null)
 

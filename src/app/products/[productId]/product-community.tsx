@@ -1,4 +1,5 @@
 "use client"
+import { confirmAction } from "@/components/confirm-action"
 
 import Link from "next/link"
 import { MessageCircle, Pencil, Send, Star, Trash2 } from "lucide-react"
@@ -138,6 +139,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(reviewId: number) {
+    if (!(await confirmAction("이 리뷰를 삭제할까요? 삭제한 내용은 복구할 수 없습니다."))) return
     setIsSubmitting(true)
     setMessage(null)
 
@@ -401,6 +403,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(qnaId: number) {
+    if (!(await confirmAction("이 상품 문의를 삭제할까요? 삭제한 내용은 복구할 수 없습니다."))) return
     setIsSubmitting(true)
     setMessage(null)
 
