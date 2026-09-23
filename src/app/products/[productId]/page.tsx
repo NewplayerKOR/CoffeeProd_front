@@ -338,7 +338,7 @@ function ProductCoffeeProfile({ profile }: { profile: CoffeeProfileSummary }) {
     <section className="mt-8 border-t border-neutral-200 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-neutral-500">Coffee Profile</p>
+          <p className="text-sm font-medium text-neutral-500">커피 프로필</p>
           <h3 className="mt-1 text-lg font-bold">{profile.profileName}</h3>
         </div>
         <Button variant="outline" size="sm" asChild>

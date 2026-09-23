@@ -141,8 +141,7 @@ export function CartView() {
       <div className="cart-page-content mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="editorial-kicker">Cart</p>
-          <h1 className="mt-3 text-4xl font-bold">장바구니</h1>
+          <h1 className="text-4xl font-bold">장바구니</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             담은 상품의 수량과 분쇄 옵션을 확인하고 주문으로 이어갑니다.
           </p>

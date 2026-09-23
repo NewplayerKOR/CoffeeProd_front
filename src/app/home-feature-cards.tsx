@@ -100,7 +100,6 @@ export function HomeFeatureCards() {
     <section className="home-member-section" aria-labelledby="member-menu-title">
       <div className="home-section-heading">
         <div>
-          <p className="editorial-kicker">For members</p>
           <h2 id="member-menu-title">나의 CoffeeProd</h2>
         </div>
         <p>저장한 취향부터 배송과 주문까지 빠르게 이어갑니다.</p>

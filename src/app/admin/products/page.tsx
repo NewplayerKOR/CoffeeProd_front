@@ -10,7 +10,7 @@ import { ProductsAdminView } from "./products-admin-view"
 export default function AdminProductsPage() {
   return (
     <AdminPageShell
-      eyebrow="Admin / Products"
+      eyebrow="관리자 / 상품"
       title="상품 관리"
       description="공개 상품 목록을 기준으로 상품 수정, 판매 상태 변경, 재고 추가 작업을 수행합니다."
       actions={

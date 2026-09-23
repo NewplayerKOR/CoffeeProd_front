@@ -14,7 +14,7 @@ type AdminPageShellProps = {
 }
 
 export function AdminPageShell({
-  eyebrow = "Admin",
+  eyebrow = "관리자",
   title,
   description,
   actions,
@@ -23,11 +23,11 @@ export function AdminPageShell({
   return (
     <main className="admin-shell flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-10">
-        <header className="admin-header mb-12 flex flex-col gap-4 border-b border-neutral-200 pb-5 md:flex-row md:items-center md:justify-between">
+        <header className="admin-header mb-8 flex flex-col gap-4 border-b border-neutral-200 pb-5 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="site-wordmark flex items-baseline gap-3">
             CoffeeProd
-            <span className="font-sans text-[11px] font-semibold uppercase text-neutral-500">
-              Admin console
+            <span className="font-sans text-xs font-semibold text-neutral-500">
+              관리자
             </span>
           </Link>
 
@@ -51,7 +51,7 @@ export function AdminPageShell({
         <section className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="editorial-kicker">{eyebrow}</p>
-            <h1 className="mt-3 text-4xl font-bold">{title}</h1>
+            <h1 className="mt-2 text-3xl font-bold">{title}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
               {description}
             </p>

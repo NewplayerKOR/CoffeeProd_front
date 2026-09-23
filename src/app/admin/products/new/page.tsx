@@ -9,7 +9,7 @@ import { ProductAdminForm } from "../product-admin-form"
 export default function AdminProductNewPage() {
   return (
     <AdminPageShell
-      eyebrow="Admin / Products"
+      eyebrow="관리자 / 상품"
       title="상품 등록"
       description="상품 정보와 이미지를 입력해 새 상품을 등록합니다."
       actions={

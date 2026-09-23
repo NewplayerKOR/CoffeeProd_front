@@ -80,7 +80,6 @@ export function HomeTasteFinder({
     <section className="home-taste-section" aria-labelledby="taste-finder-title">
       <div className="home-section-heading">
         <div>
-          <p className="editorial-kicker">Taste Finder</p>
           <h2 id="taste-finder-title">오늘의 취향을 골라보세요</h2>
         </div>
         <p>

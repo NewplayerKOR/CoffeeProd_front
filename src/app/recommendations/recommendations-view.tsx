@@ -89,8 +89,7 @@ export function RecommendationsView({
       <SiteHeader />
       <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
         <section className="mb-10">
-          <p className="editorial-kicker">Taste Finder</p>
-          <h1 className="mt-3 text-4xl font-bold">내 취향에 맞는 커피 찾기</h1>
+          <h1 className="text-4xl font-bold">내 취향에 맞는 커피 찾기</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             원하는 로스팅과 향미 강도를 선택하면 현재 판매 가능한 원두 중
             가까운 상품을 추천합니다.

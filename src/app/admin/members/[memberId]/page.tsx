@@ -20,7 +20,7 @@ export default async function AdminMemberDetailPage({
 
   return (
     <AdminPageShell
-      eyebrow="Admin / Members"
+      eyebrow="관리자 / 회원"
       title="회원 상세"
       description="회원 상세 정보를 확인하고 등급과 상태를 관리합니다."
       actions={

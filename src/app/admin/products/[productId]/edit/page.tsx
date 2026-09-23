@@ -20,7 +20,7 @@ export default async function AdminProductEditPage({
 
   return (
     <AdminPageShell
-      eyebrow="Admin / Products"
+      eyebrow="관리자 / 상품"
       title="상품 수정"
       description="상품 정보를 확인하고 변경 사항을 저장합니다."
       actions={

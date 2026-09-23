@@ -143,8 +143,7 @@ export function CoffeePreferenceView({
       <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="editorial-kicker">My Coffee</p>
-          <h1 className="mt-3 text-4xl font-bold">내 커피 취향</h1>
+          <h1 className="text-4xl font-bold">내 커피 취향</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             자주 찾는 커피의 기준을 저장하면 판매 가능한 상품을 같은 기준으로
             다시 추천받을 수 있습니다.

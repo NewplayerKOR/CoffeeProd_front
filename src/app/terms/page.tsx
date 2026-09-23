@@ -7,8 +7,7 @@ export default function TermsPage() {
       <SiteHeader />
       <div className="mx-auto w-full max-w-[860px] flex-1 px-6 py-14">
         <article>
-          <p className="editorial-kicker">Terms</p>
-          <h1 className="mt-3 text-4xl font-bold">이용약관</h1>
+          <h1 className="text-4xl font-bold">이용약관</h1>
           <p className="mt-4 text-sm leading-6 text-neutral-600">
             본 약관은 CoffeeProd 예제 서비스의 이용 조건과 절차를 안내하기
             위한 샘플 문서입니다.

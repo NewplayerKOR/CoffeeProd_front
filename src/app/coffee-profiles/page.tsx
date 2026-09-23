@@ -32,8 +32,7 @@ export default async function CoffeeProfilesPage({
       <div className="mx-auto w-full max-w-[1320px] px-6 py-12">
         <section className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="editorial-kicker">Coffee Profiles</p>
-            <h1 className="mt-3 text-4xl font-bold">커피를 이해하는 기준</h1>
+            <h1 className="text-4xl font-bold">커피를 이해하는 기준</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
               원산지와 가공 방식, 향미와 추천 추출법으로 CoffeeProd의 원두
               기준을 살펴봅니다.

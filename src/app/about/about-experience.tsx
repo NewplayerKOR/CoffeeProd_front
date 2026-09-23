@@ -8,7 +8,6 @@ import {
   MapPin,
   PackageCheck,
   ShoppingCart,
-  Sparkles,
   Truck,
 } from "lucide-react"
 import {
@@ -20,7 +19,8 @@ import {
   useSyncExternalStore,
 } from "react"
 
-import { ThemeToggle } from "@/components/theme-toggle"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -54,10 +54,10 @@ const flowSteps = [
 ]
 
 const sections = [
-  { id: "intro", label: "Intro" },
-  { id: "state", label: "State" },
-  { id: "flow", label: "Flow" },
-  { id: "detail", label: "Detail" },
+  { id: "intro", label: "소개" },
+  { id: "state", label: "약속" },
+  { id: "flow", label: "여정" },
+  { id: "detail", label: "주문 이후" },
   { id: "end", label: "CoffeeProd" },
 ]
 
@@ -77,7 +77,6 @@ export function AboutExperience() {
   const wheelGestureTriggeredRef = useRef(false)
   const wheelGestureReleaseTimerRef = useRef<number | null>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
-  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
   const [activeSection, setActiveSection] = useState("intro")
   const [isTransitioning, setIsTransitioning] = useState(false)
   const prefersReducedMotion = useSyncExternalStore(
@@ -409,26 +408,7 @@ export function AboutExperience() {
       data-transitioning={isTransitioning}
       className="about-experience min-h-dvh"
     >
-      <header className="about-header fixed left-0 right-0 top-0 z-40 border-b backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="about-wordmark flex items-center gap-2 font-semibold">
-            <Coffee className="size-5" />
-            CoffeeProd
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <Link href="/">메인</Link>
-            </Button>
-            <ThemeToggle />
-            <Button size="sm" asChild>
-              <Link href="/products">
-                상품
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
       <nav
         className="about-section-nav fixed right-5 top-1/2 z-40 hidden -translate-y-1/2 flex-col gap-3 md:flex"
         aria-label="소개 페이지 섹션"
@@ -463,25 +443,14 @@ export function AboutExperience() {
         data-active={activeSection === "intro"}
         data-position={getSectionPosition(0, activeSectionIndex)}
         className="about-section about-section-hero relative flex min-h-dvh items-end overflow-hidden px-6 pb-16 pt-28"
-        onPointerMove={(event) => {
-          if (prefersReducedMotion) {
-            return
-          }
-
-          const rect = event.currentTarget.getBoundingClientRect()
-          setPointerOffset({
-            x: (event.clientX - rect.left) / rect.width - 0.5,
-            y: (event.clientY - rect.top) / rect.height - 0.5,
-          })
-        }}
       >
         <div
           className="about-hero-image absolute inset-0 bg-cover bg-center"
           style={
             prefersReducedMotion || isDesktopStage
-              ? { backgroundImage: "url('/images/hero-coffee-bg.svg')" }
+              ? { backgroundImage: "url('/images/coffeeprod-hero-dark.webp')" }
               : {
-                  backgroundImage: "url('/images/hero-coffee-bg.svg')",
+                  backgroundImage: "url('/images/coffeeprod-hero-dark.webp')",
                   transform: `scale(${1 + scrollProgress * 0.12}) translateY(${
                     scrollProgress * 36
                   }px)`,
@@ -490,32 +459,7 @@ export function AboutExperience() {
         />
         <div className="about-hero-shade absolute inset-0" />
         <div className="about-hero-fade absolute inset-x-0 bottom-0 h-48" />
-        <div
-          className="about-hero-orbit absolute right-[8%] top-[22%] hidden h-52 w-52 rounded-full border backdrop-blur md:block"
-          style={
-            prefersReducedMotion
-              ? undefined
-              : {
-                  transform: `translate(${pointerOffset.x * 32}px, ${
-                    pointerOffset.y * 32
-                  }px) rotate(${scrollProgress * 22}deg)`,
-                }
-          }
-        />
-        <div
-          className="about-hero-tile absolute right-[19%] top-[40%] hidden h-28 w-28 rounded-lg border backdrop-blur md:block"
-          style={
-            prefersReducedMotion
-              ? undefined
-              : {
-                  transform: `translate(${pointerOffset.x * -42}px, ${
-                    pointerOffset.y * -30
-                  }px) rotate(${-10 - scrollProgress * 18}deg)`,
-                }
-          }
-        />
-
-        <div className="about-section-content relative mx-auto w-full max-w-6xl">
+        <div className="about-section-content relative mx-auto w-full max-w-[1320px]">
           <div
             className="max-w-3xl"
             style={
@@ -529,10 +473,7 @@ export function AboutExperience() {
             }
           >
             <RevealBlock variant="hero">
-              <p className="about-accent flex items-center gap-2 text-sm font-semibold">
-                <Sparkles className="size-4" />
-                Coffee for your everyday
-              </p>
+              <p className="about-accent text-sm font-semibold">CoffeeProd의 이야기</p>
               <h1 className="mt-5 text-5xl font-bold leading-tight md:text-7xl">
                 오늘의 취향에 꼭 맞는 커피를 만나는 시간.
               </h1>
@@ -552,9 +493,9 @@ export function AboutExperience() {
         data-position={getSectionPosition(1, activeSectionIndex)}
         className="about-section about-section-dark min-h-dvh px-6 py-24"
       >
-        <div className="about-section-content mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="about-section-content mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-[1320px] items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <RevealBlock variant="left">
-            <p className="about-accent text-sm font-semibold">Our promise</p>
+            <p className="about-accent text-sm font-semibold">우리가 지키는 약속</p>
             <h2 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
               좋은 커피를 만나는 모든 순간이 자연스럽도록.
             </h2>
@@ -570,9 +511,9 @@ export function AboutExperience() {
                   delay={index * 140}
                   variant="right"
                 >
-                  <article className="about-value-card group rounded-lg border p-5">
+                  <article className="about-value-card border-b py-5">
                     <div className="flex items-start gap-4">
-                      <div className="about-value-icon flex size-11 shrink-0 items-center justify-center rounded-lg">
+                      <div className="about-value-icon flex size-11 shrink-0 items-center justify-center">
                         <Icon className="size-5" />
                       </div>
                       <div>
@@ -597,10 +538,9 @@ export function AboutExperience() {
         data-position={getSectionPosition(2, activeSectionIndex)}
         className="about-section about-section-light relative min-h-dvh border-y"
       >
-        <div className="about-flow-wash absolute inset-0" />
-        <div className="about-section-content relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center px-6 py-24">
+        <div className="about-section-content relative mx-auto flex min-h-dvh w-full max-w-[1320px] flex-col justify-center px-6 py-24">
           <RevealBlock variant="left">
-            <p className="about-light-kicker text-sm font-semibold">From bean to cup</p>
+            <p className="about-light-kicker text-sm font-semibold">원두에서 한 잔까지</p>
             <h2 className="mt-4 max-w-3xl text-4xl font-bold leading-tight md:text-5xl">
               당신의 한 잔이 찾아오는 길을 정성스럽게 잇습니다.
             </h2>
@@ -620,9 +560,7 @@ export function AboutExperience() {
                     <div className="about-flow-icon flex size-12 items-center justify-center rounded-lg">
                       <Icon className="size-5" />
                     </div>
-                    <p className="about-light-muted mt-5 text-sm font-medium">
-                      Step {index + 1}
-                    </p>
+                    <p className="about-light-muted mt-5 text-sm font-medium">{String(index + 1).padStart(2, "0")}</p>
                     <h3 className="mt-1 text-xl font-bold">{step.label}</h3>
                   </div>
                 </RevealBlock>
@@ -639,13 +577,13 @@ export function AboutExperience() {
         data-position={getSectionPosition(3, activeSectionIndex)}
         className="about-section about-section-deep min-h-dvh px-6 py-24"
       >
-        <div className="about-section-content mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1fr]">
+        <div className="about-section-content mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-[1320px] items-center gap-10 lg:grid-cols-[1fr_1fr]">
           <RevealBlock variant="left">
             <div className="about-detail-media relative min-h-[460px] overflow-hidden rounded-lg border">
-              <div className="absolute inset-0 bg-[url('/images/hero-coffee-bg.svg')] bg-cover bg-center opacity-70" />
+              <div className="absolute inset-0 bg-[url('/images/coffeeprod-hero-dark.webp')] bg-cover bg-center opacity-70" />
               <div className="about-detail-shade absolute inset-0" />
               <div className="about-detail-caption absolute bottom-6 left-6 right-6 rounded-lg p-5 backdrop-blur">
-                <p className="about-accent text-sm font-medium">Always connected</p>
+                <p className="about-accent text-sm font-medium">주문 이후에도</p>
                 <h3 className="mt-2 text-2xl font-bold">멈춘 주문도 편안하게 이어서</h3>
                 <p className="about-copy-muted mt-3 text-sm leading-6">
                   잠시 결제를 멈췄더라도 걱정하지 마세요. 주문 내역에서 다시
@@ -656,7 +594,7 @@ export function AboutExperience() {
           </RevealBlock>
 
           <RevealBlock delay={180} variant="right">
-            <p className="about-accent text-sm font-semibold">After your order</p>
+            <p className="about-accent text-sm font-semibold">함께 이어지는 시간</p>
             <h2 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
               좋은 경험은 주문 이후에도 이어집니다.
             </h2>
@@ -680,10 +618,10 @@ export function AboutExperience() {
         data-index="05"
         data-active={activeSection === "end"}
         data-position={getSectionPosition(4, activeSectionIndex)}
-        className="about-section about-section-end flex min-h-dvh items-center justify-center border-t px-6 py-20"
+        className="about-section about-section-end flex min-h-dvh flex-col justify-between border-t pt-24"
       >
         <RevealBlock variant="scale">
-          <div className="about-section-content mx-auto flex max-w-3xl flex-col items-center text-center">
+          <div className="about-section-content mx-auto flex w-full max-w-3xl flex-col items-center px-6 py-10 text-center">
             <PackageCheck className="about-accent size-10" />
             <h2 className="mt-5 text-4xl font-bold">CoffeeProd</h2>
             <p className="about-copy-muted mt-4 text-base leading-7">
@@ -697,6 +635,7 @@ export function AboutExperience() {
             </div>
           </div>
         </RevealBlock>
+        <SiteFooter />
       </section>
     </main>
   )

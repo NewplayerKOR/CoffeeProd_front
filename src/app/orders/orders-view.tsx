@@ -170,8 +170,7 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
         </header>
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Orders</p>
-          <h1 className="mt-2 text-3xl font-bold">주문 내역</h1>
+          <h1 className="text-3xl font-bold">주문 내역</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             내 주문 상태를 확인하고 결제 대기 또는 결제 완료 상태의 주문을
             취소할 수 있습니다.

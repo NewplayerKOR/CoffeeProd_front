@@ -95,8 +95,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <SiteHeader />
       <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
         <section className="catalog-intro mb-10">
-          <p className="editorial-kicker">Coffee collection</p>
-          <h1 className="mt-3 text-4xl font-bold">오늘의 원두를 고르세요</h1>
+          <h1 className="text-4xl font-bold">오늘의 원두를 고르세요</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             원산지와 가공 방식, 로스팅과 향의 균형을 비교해 나에게 맞는
             커피를 발견해 보세요.

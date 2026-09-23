@@ -42,7 +42,7 @@ export default async function Home() {
         />
 
         <div className="home-hero-content">
-          <p className="editorial-kicker">Specialty coffee, curated for you</p>
+          <p className="editorial-kicker">취향에 맞는 스페셜티 커피</p>
           <h1 id="home-title">CoffeeProd</h1>
           <p className="home-hero-copy">
             당신의 취향이 머무는 한 잔을 찾습니다.
@@ -71,10 +71,9 @@ export default async function Home() {
       <section className="home-journal-section">
         <div className="home-section-heading">
           <div>
-            <p className="editorial-kicker">Coffee Journal</p>
-            <h2>한 잔을 고르는 새로운 기준</h2>
+            <h2>추천 원두와 소식</h2>
           </div>
-          <p>원두 이야기와 CoffeeProd의 새로운 소식을 만나보세요.</p>
+          <p>지금 살펴볼 원두와 CoffeeProd의 소식을 만나보세요.</p>
         </div>
         <HomeSlider slides={slides} />
       </section>
@@ -82,8 +81,7 @@ export default async function Home() {
       <section className="home-products-section" aria-labelledby="home-products-title">
         <div className="home-section-heading home-products-heading">
           <div>
-            <p className="editorial-kicker">Today&apos;s coffee</p>
-            <h2 id="home-products-title">오늘의 커피</h2>
+            <h2 id="home-products-title">최근 등록된 원두</h2>
           </div>
           <Button variant="ghost" asChild>
             <Link href="/products">
@@ -150,7 +148,7 @@ function buildHomeSlides(products: ProductListItem[]): HomeSlide[] {
     ...productSlides,
     {
       id: "event-taste",
-      eyebrow: "Taste Finder",
+      eyebrow: "취향 추천",
       title: "취향을 기록하면 선택이 쉬워집니다",
       description:
         "산미, 바디, 단맛과 향의 선호도를 바탕으로 현재 판매 가능한 커피를 추천합니다.",
@@ -160,7 +158,7 @@ function buildHomeSlides(products: ProductListItem[]): HomeSlide[] {
     },
     {
       id: "event-account",
-      eyebrow: "Membership",
+      eyebrow: "회원 서비스",
       title: "좋아하는 커피를 다음 한 잔으로 이어가세요",
       description:
         "회원 취향을 저장하고 배송지, 장바구니와 주문 내역을 한 흐름으로 관리할 수 있습니다.",

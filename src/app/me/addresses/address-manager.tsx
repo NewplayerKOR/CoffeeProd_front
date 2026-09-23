@@ -362,8 +362,7 @@ export function AddressManager() {
       <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="editorial-kicker">Addresses</p>
-          <h1 className="mt-3 text-4xl font-bold">배송지 관리</h1>
+          <h1 className="text-4xl font-bold">배송지 관리</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             주문에 사용할 배송지를 등록하고 기본 배송지를 지정합니다.
           </p>

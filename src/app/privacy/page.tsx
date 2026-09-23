@@ -7,8 +7,7 @@ export default function PrivacyPage() {
       <SiteHeader />
       <div className="mx-auto w-full max-w-[860px] flex-1 px-6 py-14">
         <article>
-          <p className="editorial-kicker">Privacy</p>
-          <h1 className="mt-3 text-4xl font-bold">개인정보처리방침</h1>
+          <h1 className="text-4xl font-bold">개인정보처리방침</h1>
           <p className="mt-4 text-sm leading-6 text-neutral-600">
             본 문서는 CoffeeProd 예제 서비스의 개인정보 처리 방식을 설명하기
             위한 샘플 문서입니다.

@@ -26,7 +26,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <section className="auth-panel rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
           <div className="mb-6 text-center">
-            <p className="editorial-kicker">Welcome back</p>
             <h1 className="text-2xl font-bold">로그인</h1>
             <p className="mt-2 text-sm text-neutral-600">
               CoffeeProd 계정으로 로그인하세요.

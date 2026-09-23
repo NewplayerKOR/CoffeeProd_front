@@ -259,8 +259,7 @@ export function MyPageView() {
       <div className="mx-auto w-full max-w-[1320px] flex-1 px-6 py-12">
 
         <section className="mb-8">
-          <p className="editorial-kicker">My account</p>
-          <h1 className="mt-3 text-4xl font-bold">나의 CoffeeProd</h1>
+          <h1 className="text-4xl font-bold">나의 CoffeeProd</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
             내 정보와 계정 설정, 배송지와 주문 관련 메뉴를 관리합니다.
           </p>

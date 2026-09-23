@@ -21,7 +21,6 @@ export default function SignupPage() {
             <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-lg bg-neutral-100">
               <UserPlus className="size-5" />
             </div>
-            <p className="editorial-kicker">Create account</p>
             <h1 className="text-2xl font-bold">회원가입</h1>
             <p className="mt-2 text-sm text-neutral-600">
               이메일과 비밀번호로 CoffeeProd 계정을 만듭니다.
