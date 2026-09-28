@@ -45,3 +45,6 @@ next-env.d.ts
 
 # .md
 .md
+
+# local AI tooling
+/.codex/
