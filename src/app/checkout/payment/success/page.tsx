@@ -5,22 +5,25 @@ type PaymentSuccessPageProps = {
     paymentKey?: string
     orderId?: string
     amount?: string
-    paymentType?: string
   }>
 }
 
 export default async function PaymentSuccessPage({
   searchParams,
 }: PaymentSuccessPageProps) {
-  const { paymentKey, orderId, amount, paymentType } = await searchParams
-  const parsedAmount = Number(amount)
+  const { paymentKey, orderId, amount } = await searchParams
+  const parsedAmount =
+    amount && /^[1-9]\d*$/.test(amount) ? Number(amount) : null
 
   return (
     <PaymentSuccessView
       paymentKey={paymentKey ?? null}
       tossOrderId={orderId ?? null}
-      amount={Number.isFinite(parsedAmount) ? parsedAmount : null}
-      paymentType={paymentType ?? null}
+      amount={
+        parsedAmount !== null && Number.isSafeInteger(parsedAmount)
+          ? parsedAmount
+          : null
+      }
     />
   )
 }

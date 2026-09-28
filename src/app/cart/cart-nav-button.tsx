@@ -13,8 +13,8 @@ type CartNavButtonProps = {
 }
 
 export function CartNavButton({ className, iconOnly = false }: CartNavButtonProps) {
-  const { cart } = useSessionState()
-  const totalQuantity = cart.totalQuantity
+  const { cart, cartStatus } = useSessionState()
+  const totalQuantity = cartStatus === "ready" ? (cart?.totalQuantity ?? 0) : 0
 
   return (
     <Button

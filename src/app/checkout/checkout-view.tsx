@@ -3,12 +3,22 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  CircleAlert,
   Home,
   MapPin,
   PackageCheck,
+  RotateCw,
   ShoppingCart,
 } from "lucide-react"
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react"
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { Button } from "@/components/ui/button"
 import { getAddresses, type Address } from "@/lib/api/address"
@@ -21,92 +31,117 @@ import { calculateEstimatedDeliveryFee } from "@/lib/order-pricing"
 
 import { CartNavButton } from "../cart/cart-nav-button"
 
-const emptyCart: Cart = {
-  items: [],
-  totalPrice: 0,
-  totalQuantity: 0,
-}
-
 type CheckoutStatus = "checking" | "guest" | "ready"
+type ResourceStatus = "checking" | "ready" | "error"
 
 export function CheckoutView() {
   const router = useRouter()
+  const loadRequestId = useRef(0)
   const [status, setStatus] = useState<CheckoutStatus>("checking")
   const [member, setMember] = useState<Member | null>(null)
-  const [cart, setCart] = useState<Cart>(emptyCart)
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const [cart, setCart] = useState<Cart | null>(null)
+  const [addresses, setAddresses] = useState<Address[] | null>(null)
+  const [memberStatus, setMemberStatus] = useState<ResourceStatus>("checking")
+  const [cartStatus, setCartStatus] = useState<ResourceStatus>("checking")
+  const [addressesStatus, setAddressesStatus] = useState<ResourceStatus>("checking")
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null)
   const [usedMileage, setUsedMileage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const hasItems = cart.items.length > 0
+  const hasItems = (cart?.items.length ?? 0) > 0
+  const cartTotalPrice = cart?.totalPrice ?? 0
+  const hasLoadError =
+    memberStatus === "error" ||
+    cartStatus === "error" ||
+    addressesStatus === "error"
   const maxMileage = useMemo(() => {
-    if (!member) {
+    if (!member || cartStatus !== "ready") {
       return 0
     }
 
-    return Math.min(member.mileage, cart.totalPrice)
-  }, [cart.totalPrice, member])
-  const estimatedDeliveryFee = calculateEstimatedDeliveryFee(cart.totalPrice)
+    return Math.min(member.mileage, cartTotalPrice)
+  }, [cartStatus, cartTotalPrice, member])
+  const estimatedDeliveryFee = calculateEstimatedDeliveryFee(cartTotalPrice)
   const expectedPayment = Math.max(
-    cart.totalPrice - usedMileage + estimatedDeliveryFee,
+    cartTotalPrice - usedMileage + estimatedDeliveryFee,
     0
   )
 
-  useEffect(() => {
-    let isActive = true
+  const loadCheckoutData = useCallback(async () => {
+    const requestId = ++loadRequestId.current
 
-    async function loadCheckoutData() {
-      if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setStatus("guest")
-        }
-        return
-      }
-
-      try {
-        const [currentMember, currentCart, currentAddresses] = await Promise.all([
-          getMe(),
-          getCart(),
-          getAddresses(),
-        ])
-
-        if (!isActive) {
-          return
-        }
-
-        const defaultAddress =
-          currentAddresses.find((address) => address.isDefault === true) ??
-          currentAddresses[0] ??
-          null
-
-        setMember(currentMember)
-        setCart(currentCart)
-        setAddresses(currentAddresses)
-        setSelectedAddressId(defaultAddress?.id ?? null)
-        setStatus("ready")
-      } catch (error) {
-        if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
-          if (isActive) {
-            setStatus("guest")
-          }
-          return
-        }
-
-        if (isActive) {
-          setMessage(getCheckoutErrorMessage(error))
-          setStatus("ready")
-        }
-      }
+    if (!getStoredAuthTokens()) {
+      setStatus("guest")
+      return
     }
 
-    void loadCheckoutData()
+    setStatus("checking")
+    setMessage(null)
+    setMember(null)
+    setCart(null)
+    setAddresses(null)
+    setMemberStatus("checking")
+    setCartStatus("checking")
+    setAddressesStatus("checking")
+    setSelectedAddressId(null)
+    setUsedMileage(0)
+
+    const [memberResult, cartResult, addressesResult] = await Promise.allSettled([
+      getMe(),
+      getCart(),
+      getAddresses(),
+    ])
+
+    if (requestId !== loadRequestId.current) {
+      return
+    }
+
+    if ([memberResult, cartResult, addressesResult].some(isUnauthorizedResult)) {
+      setStatus("guest")
+      return
+    }
+
+    if (memberResult.status === "fulfilled") {
+      setMember(memberResult.value)
+      setMemberStatus("ready")
+    } else {
+      setMemberStatus("error")
+    }
+
+    if (cartResult.status === "fulfilled") {
+      setCart(cartResult.value)
+      setCartStatus("ready")
+    } else {
+      setCartStatus("error")
+    }
+
+    if (addressesResult.status === "fulfilled") {
+      const defaultAddress =
+        addressesResult.value.find((address) => address.isDefault === true) ??
+        addressesResult.value[0] ??
+        null
+
+      setAddresses(addressesResult.value)
+      setSelectedAddressId(defaultAddress?.id ?? null)
+      setAddressesStatus("ready")
+    } else {
+      setAddressesStatus("error")
+    }
+
+    setStatus("ready")
+  }, [])
+
+  useEffect(() => {
+    const initialLoadId = window.setTimeout(() => {
+      void loadCheckoutData()
+    }, 0)
 
     return () => {
-      isActive = false
+      window.clearTimeout(initialLoadId)
+      loadRequestId.current += 1
     }
-  }, [])
+  }, [loadCheckoutData])
 
   function handleMileageChange(event: ChangeEvent<HTMLInputElement>) {
     const nextMileage = Number(event.currentTarget.value)
@@ -166,10 +201,9 @@ export function CheckoutView() {
         </header>
 
         <section className="mb-8">
-          <p className="text-sm font-medium text-neutral-500">Checkout</p>
           <h1 className="mt-2 text-3xl font-bold">주문서 작성</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-            배송지와 사용 마일리지를 선택해 주문을 생성합니다.
+            배송지와 사용할 마일리지를 선택해 주세요.
           </p>
         </section>
 
@@ -184,7 +218,7 @@ export function CheckoutView() {
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
               <ShoppingCart className="size-6 text-neutral-500" />
             </div>
-            <h2 className="mt-5 text-2xl font-bold">로그인이 필요합니다.</h2>
+            <h2 className="mt-5 text-xl font-bold sm:text-2xl">로그인이 필요합니다.</h2>
             <p className="mt-3 text-sm text-neutral-600">
               주문서는 로그인 후 작성할 수 있습니다.
             </p>
@@ -200,6 +234,31 @@ export function CheckoutView() {
             onSubmit={handleSubmit}
           >
             <div className="flex flex-col gap-6">
+              {hasLoadError && (
+                <div
+                  className="flex flex-col gap-4 border-l-4 border-red-500 bg-red-50 px-4 py-4 text-red-900 sm:flex-row sm:items-center sm:justify-between"
+                  role="alert"
+                >
+                  <div className="flex gap-3">
+                    <CircleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                    <div>
+                      <h2 className="font-bold">일부 주문 정보를 확인하지 못했습니다.</h2>
+                      <p className="mt-1 text-sm leading-6 text-red-800">
+                        확인되지 않은 항목은 빈 상태로 표시하지 않았습니다. 연결을 확인한 뒤 다시 시도해 주세요.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0 border-red-300 bg-white text-red-800 hover:bg-red-100"
+                    onClick={() => void loadCheckoutData()}
+                  >
+                    <RotateCw data-icon="inline-start" /> 다시 시도
+                  </Button>
+                </div>
+              )}
+
               {message && (
                 <p
                   className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
@@ -225,13 +284,19 @@ export function CheckoutView() {
                   </Button>
                 </div>
 
-                {addresses.length === 0 ? (
+                {addressesStatus === "error" ? (
+                  <ResourceLoadError
+                    title="배송지를 불러오지 못했습니다."
+                    description="등록된 배송지가 없는 것으로 처리하지 않았습니다. 다시 시도해 주세요."
+                    onRetry={loadCheckoutData}
+                  />
+                ) : addresses?.length === 0 ? (
                   <div className="mt-5 rounded-lg border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600">
                     등록된 배송지가 없습니다. 배송지를 먼저 등록해 주세요.
                   </div>
                 ) : (
                   <div className="mt-5 grid gap-3">
-                    {addresses.map((address) => (
+                    {addresses?.map((address) => (
                       <label
                         key={address.id}
                         className="flex cursor-pointer gap-3 rounded-lg border border-neutral-200 bg-white p-4 has-checked:border-neutral-950"
@@ -273,13 +338,19 @@ export function CheckoutView() {
 
               <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
                 <h2 className="text-lg font-bold">주문 상품</h2>
-                {cart.items.length === 0 ? (
+                {cartStatus === "error" ? (
+                  <ResourceLoadError
+                    title="장바구니 상품을 불러오지 못했습니다."
+                    description="장바구니가 비어 있는 것으로 처리하지 않았습니다. 장바구니를 확인한 뒤 다시 시도해 주세요."
+                    onRetry={loadCheckoutData}
+                  />
+                ) : cart?.items.length === 0 ? (
                   <div className="mt-5 rounded-lg border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600">
                     장바구니에 담긴 상품이 없습니다.
                   </div>
                 ) : (
                   <div className="mt-5 flex flex-col gap-3">
-                    {cart.items.map((item) => (
+                    {cart?.items.map((item) => (
                       <div
                         key={item.cartItemId}
                         className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 p-4"
@@ -302,31 +373,41 @@ export function CheckoutView() {
 
               <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
                 <h2 className="text-lg font-bold">마일리지</h2>
-                <p className="mt-1 text-sm text-neutral-500">
-                  보유 마일리지 안에서 주문 금액까지 사용할 수 있습니다.
-                </p>
-                <div className="mt-5 max-w-sm">
-                  <label
-                    htmlFor="usedMileage"
-                    className="mb-2 block text-sm font-semibold"
-                  >
-                    사용 마일리지
-                  </label>
-                  <input
-                    id="usedMileage"
-                    name="usedMileage"
-                    type="number"
-                    min={0}
-                    max={maxMileage}
-                    value={usedMileage}
-                    disabled={!hasItems}
-                    className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
-                    onChange={handleMileageChange}
+                {memberStatus === "error" ? (
+                  <ResourceLoadError
+                    title="보유 마일리지를 확인하지 못했습니다."
+                    description="마일리지를 0으로 확정하지 않았습니다. 다시 시도해 주세요."
+                    onRetry={loadCheckoutData}
                   />
-                  <p className="mt-2 text-sm text-neutral-500">
-                    사용 가능: {maxMileage.toLocaleString()}P
-                  </p>
-                </div>
+                ) : (
+                  <>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      보유 마일리지 안에서 주문 금액까지 사용할 수 있습니다.
+                    </p>
+                    <div className="mt-5 max-w-sm">
+                      <label
+                        htmlFor="usedMileage"
+                        className="mb-2 block text-sm font-semibold"
+                      >
+                        사용 마일리지
+                      </label>
+                      <input
+                        id="usedMileage"
+                        name="usedMileage"
+                        type="number"
+                        min={0}
+                        max={maxMileage}
+                        value={usedMileage}
+                        disabled={!hasItems}
+                        className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
+                        onChange={handleMileageChange}
+                      />
+                      <p className="mt-2 text-sm text-neutral-500">
+                        사용 가능: {maxMileage.toLocaleString()}P
+                      </p>
+                    </div>
+                  </>
+                )}
               </section>
             </div>
 
@@ -335,48 +416,98 @@ export function CheckoutView() {
               <div className="mt-5 flex flex-col gap-3 border-y border-neutral-200 py-4 text-sm">
                 <SummaryRow
                   label="상품 수량"
-                  value={`${cart.totalQuantity.toLocaleString()}개`}
+                  value={
+                    cartStatus === "ready"
+                      ? `${(cart?.totalQuantity ?? 0).toLocaleString()}개`
+                      : "확인 필요"
+                  }
                 />
                 <SummaryRow
                   label="상품 금액"
-                  value={`${cart.totalPrice.toLocaleString()}원`}
+                  value={
+                    cartStatus === "ready"
+                      ? `${cartTotalPrice.toLocaleString()}원`
+                      : "확인 필요"
+                  }
                 />
                 <SummaryRow
                   label="예상 배송비"
                   value={
-                    estimatedDeliveryFee === 0
-                      ? "무료"
-                      : `${estimatedDeliveryFee.toLocaleString()}원`
+                    cartStatus !== "ready"
+                      ? "확인 필요"
+                      : estimatedDeliveryFee === 0
+                        ? "무료"
+                        : `${estimatedDeliveryFee.toLocaleString()}원`
                   }
                 />
                 <SummaryRow
                   label="사용 마일리지"
-                  value={`-${usedMileage.toLocaleString()}P`}
+                  value={
+                    memberStatus === "ready"
+                      ? `-${usedMileage.toLocaleString()}P`
+                      : "확인 필요"
+                  }
                 />
               </div>
               <div className="mt-4 flex items-center justify-between gap-4">
                 <span className="font-semibold">결제 예정 금액</span>
                 <span className="text-xl font-bold">
-                  {expectedPayment.toLocaleString()}원
+                  {cartStatus === "ready" && memberStatus === "ready"
+                    ? `${expectedPayment.toLocaleString()}원`
+                    : "확인 필요"}
                 </span>
               </div>
               <p className="mt-2 text-xs leading-5 text-neutral-500">
                 최종 배송비와 결제 금액은 다음 결제 화면에서 확인해 주세요.
               </p>
+              <p className="mt-1 text-xs leading-5 text-neutral-500">
+                계속하면 주문이 접수되고 결제 화면으로 이동합니다.
+              </p>
 
               <Button
                 type="submit"
                 className="mt-6 w-full"
-                disabled={!hasItems || !selectedAddressId || isSubmitting}
+                disabled={
+                  hasLoadError ||
+                  !hasItems ||
+                  !selectedAddressId ||
+                  isSubmitting
+                }
               >
                 <PackageCheck data-icon="inline-start" />
-                {isSubmitting ? "주문 확인 중" : "주문 확인"}
+                {isSubmitting ? "결제 화면 준비 중" : "결제 화면으로 이동"}
               </Button>
             </aside>
           </form>
         )}
       </div>
     </main>
+  )
+}
+
+function ResourceLoadError({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string
+  description: string
+  onRetry: () => Promise<void>
+}) {
+  return (
+    <div className="mt-5 border-l-4 border-red-400 bg-red-50 px-4 py-4 text-sm text-red-900">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-1 leading-6 text-red-800">{description}</p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-4 border-red-300 bg-white text-red-800 hover:bg-red-100"
+        onClick={() => void onRetry()}
+      >
+        <RotateCw data-icon="inline-start" /> 다시 시도
+      </Button>
+    </div>
   )
 }
 
@@ -390,11 +521,23 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 function getCheckoutErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message
+  if (
+    error instanceof ApiError &&
+    error.kind === "VALIDATION_ERROR" &&
+    error.httpStatus < 500
+  ) {
+    return "주문 내용을 다시 확인해 주세요. 문제가 계속되면 장바구니와 배송지를 확인해 주세요."
   }
 
-  return "주문 요청을 처리하지 못했습니다."
+  return "주문 진행 여부를 확인하지 못했습니다. 다시 시도하기 전에 주문 내역을 확인해 주세요."
+}
+
+function isUnauthorizedResult(result: PromiseSettledResult<unknown>) {
+  return (
+    result.status === "rejected" &&
+    result.reason instanceof ApiError &&
+    result.reason.kind === "UNAUTHORIZED"
+  )
 }
 
 function getGrindTypeLabel(grindType: string) {

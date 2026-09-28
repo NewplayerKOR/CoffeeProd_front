@@ -27,7 +27,7 @@ type CartStatus = "idle" | "checking" | "ready" | "error"
 type SessionState = {
   status: SessionStatus
   member: Member | null
-  cart: Cart
+  cart: Cart | null
   cartStatus: CartStatus
   cartError: string | null
   refreshSession: () => Promise<void>
@@ -36,13 +36,6 @@ type SessionState = {
 
 type CartChangedEventDetail = {
   cart?: Cart
-  totalQuantity?: number
-}
-
-const emptyCart: Cart = {
-  items: [],
-  totalPrice: 0,
-  totalQuantity: 0,
 }
 
 const SessionStateContext = createContext<SessionState | null>(null)
@@ -52,14 +45,14 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
   const shouldSyncSession = needsSharedSession(pathname)
   const [status, setStatus] = useState<SessionStatus>("checking")
   const [member, setMember] = useState<Member | null>(null)
-  const [cart, setCart] = useState<Cart>(emptyCart)
+  const [cart, setCart] = useState<Cart | null>(null)
   const [cartStatus, setCartStatus] = useState<CartStatus>("idle")
   const [cartError, setCartError] = useState<string | null>(null)
 
   const resetSession = useCallback(() => {
     setStatus("guest")
     setMember(null)
-    setCart(emptyCart)
+    setCart(null)
     setCartStatus("idle")
     setCartError(null)
   }, [])
@@ -101,7 +94,7 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    setCart(emptyCart)
+    setCart(null)
     setCartStatus("error")
     setCartError("장바구니를 불러오지 못했습니다.")
   }, [resetSession])
@@ -128,18 +121,7 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
 
       if (detail?.cart) {
         replaceCart(detail.cart)
-        return
       }
-
-      if (typeof detail?.totalQuantity !== "number") {
-        return
-      }
-
-      setCart((current) => ({
-        ...current,
-        totalQuantity: detail.totalQuantity ?? current.totalQuantity,
-      }))
-      setCartStatus("ready")
     }
 
     const initialSyncId = window.setTimeout(() => {

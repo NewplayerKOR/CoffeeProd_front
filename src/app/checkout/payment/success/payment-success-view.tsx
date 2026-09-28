@@ -2,26 +2,23 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Home, LoaderCircle, ReceiptText } from "lucide-react"
+import { Home, LoaderCircle, ReceiptText } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { confirmPayment } from "@/lib/api/payment"
-import { ApiError } from "@/lib/api/types"
 
 type PaymentSuccessViewProps = {
   paymentKey: string | null
   tossOrderId: string | null
   amount: number | null
-  paymentType: string | null
 }
 
 export function PaymentSuccessView({
   paymentKey,
   tossOrderId,
   amount,
-  paymentType,
 }: PaymentSuccessViewProps) {
   const router = useRouter()
   const submittedRef = useRef(false)
@@ -36,7 +33,7 @@ export function PaymentSuccessView({
 
     async function approvePayment() {
       if (!paymentKey || !tossOrderId || amount === null) {
-        setMessage("결제 승인에 필요한 리다이렉트 정보가 없습니다.")
+        setMessage("결제 정보를 확인할 수 없습니다. 주문 내역에서 결제 상태를 확인해 주세요.")
         return
       }
 
@@ -52,15 +49,14 @@ export function PaymentSuccessView({
           amount,
         })
 
-        router.replace(
-          `/checkout/complete?orderId=${payment.orderId}&amount=${amount}&paymentId=${payment.paymentId}`
-        )
-      } catch (error) {
-        setMessage(
-          error instanceof ApiError
-            ? error.message
-            : "결제 승인 요청을 처리하지 못했습니다."
-        )
+        if (payment.status !== "SUCCESS") {
+          setMessage("결제 완료 여부를 확인할 수 없습니다. 주문 내역에서 상태를 확인해 주세요.")
+          return
+        }
+
+        router.replace(`/checkout/complete?orderId=${payment.orderId}`)
+      } catch {
+        setMessage("결제 완료 여부를 확인할 수 없습니다. 다시 결제하기 전에 주문 내역에서 상태를 확인해 주세요.")
       }
     }
 
@@ -68,20 +64,17 @@ export function PaymentSuccessView({
   }, [amount, paymentKey, router, tossOrderId])
 
   return (
-    <main className="order-page min-h-screen bg-neutral-50 px-6 py-10 text-neutral-950">
+    <main className="order-page payment-result-page min-h-screen bg-neutral-50 px-6 py-10 text-neutral-950">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-5 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
           {message ? (
             <ReceiptText className="size-8 text-red-600" />
           ) : (
-            <CheckCircle2 className="size-8 text-green-600" />
+            <LoaderCircle className="size-8 animate-spin text-neutral-600" aria-hidden="true" />
           )}
           <div>
-            <p className="text-sm font-medium text-neutral-500">
-              Toss Payments
-            </p>
             <h1 className="text-2xl font-bold">
-              {message ? "결제 승인 확인 필요" : "결제 승인 처리 중"}
+              {message ? "결제 상태 확인이 필요합니다" : "결제 결과 확인 중"}
             </h1>
           </div>
         </div>
@@ -97,45 +90,20 @@ export function PaymentSuccessView({
           </p>
         )}
 
-        <dl className="grid gap-3 border-y border-neutral-200 py-4 text-sm">
-          <SummaryRow label="Toss 주문 ID" value={tossOrderId ?? "-"} />
-          <SummaryRow label="결제 금액" value={formatAmount(amount)} />
-          <SummaryRow label="결제 타입" value={paymentType ?? "-"} />
-        </dl>
-
         {message && (
           <div className="grid gap-2 sm:grid-cols-2">
+            <Button asChild>
+              <Link href="/orders">주문 상태 확인</Link>
+            </Button>
             <Button variant="outline" asChild>
               <Link href="/">
                 <Home data-icon="inline-start" />
                 홈
               </Link>
             </Button>
-            <Button asChild>
-              <Link href="/orders">주문 내역</Link>
-            </Button>
           </div>
         )}
       </div>
     </main>
   )
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <dt className="text-neutral-500">{label}</dt>
-      <dd className="max-w-64 truncate text-right font-semibold text-neutral-950">
-        {value}
-      </dd>
-    </div>
-  )
-}
-
-function formatAmount(amount: number | null) {
-  if (amount === null) {
-    return "-"
-  }
-
-  return `${amount.toLocaleString()}원`
 }

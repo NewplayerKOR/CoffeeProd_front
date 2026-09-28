@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { OrderDateTime } from "@/components/order-date-time"
 import { Button } from "@/components/ui/button"
 import { SiteFooter } from "@/components/site-footer"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
@@ -255,8 +256,8 @@ export function OrdersView({ initialPage }: OrdersViewProps) {
                         </h2>
                         <OrderStatusPill status={order.status} />
                       </div>
-                      <p className="mt-2 text-sm text-neutral-500">
-                        {order.orderDate}
+                      <p className="mt-2 text-sm text-neutral-500 tabular-nums">
+                        <OrderDateTime value={order.orderDate} />
                       </p>
                       <p className="mt-3 text-sm leading-6 text-neutral-700">
                         {order.firstProductName}

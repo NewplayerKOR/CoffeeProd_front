@@ -62,9 +62,10 @@ export function CartView() {
         : sessionStatus === "error" || cartStatus === "error"
           ? "error"
           : "ready"
-  const hasItems = cart.items.length > 0
-  const shippingFee = calculateEstimatedDeliveryFee(cart.totalPrice)
-  const orderTotal = cart.totalPrice + shippingFee
+  const currentCart = cart ?? emptyCart
+  const hasItems = currentCart.items.length > 0
+  const shippingFee = calculateEstimatedDeliveryFee(currentCart.totalPrice)
+  const orderTotal = currentCart.totalPrice + shippingFee
 
   async function handleUpdateItem(item: CartItem, nextQuantity: number) {
     if (nextQuantity <= 0) {
@@ -202,7 +203,7 @@ export function CartView() {
                 </div>
               )}
 
-              {cart.items.map((item) => {
+              {currentCart.items.map((item) => {
                 const isPending = pendingItemId === item.cartItemId
 
                 return (
@@ -328,11 +329,11 @@ export function CartView() {
               <div className="mt-5 flex flex-col gap-3 border-y border-neutral-200 py-4 text-sm">
                 <SummaryRow
                   label="상품 수량"
-                  value={`${cart.totalQuantity.toLocaleString()}개`}
+                  value={`${currentCart.totalQuantity.toLocaleString()}개`}
                 />
                 <SummaryRow
                   label="상품 금액"
-                  value={`${cart.totalPrice.toLocaleString()}원`}
+                  value={`${currentCart.totalPrice.toLocaleString()}원`}
                 />
                 <SummaryRow
                   label="배송비"

@@ -288,7 +288,7 @@ export function MyPageView() {
 
         {status === "ready" && member && (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               {message && (
                 <p
                   className={
@@ -304,12 +304,14 @@ export function MyPageView() {
 
               <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-neutral-100">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-100">
                     <UserRound className="size-6 text-neutral-500" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold">{member.nickname}님</h2>
-                    <p className="mt-1 text-sm text-neutral-500">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-xl font-bold">
+                      {member.nickname}님
+                    </h2>
+                    <p className="mt-1 break-words text-sm text-neutral-500">
                       {member.email}
                     </p>
                   </div>
@@ -395,7 +397,7 @@ export function MyPageView() {
                   <h2 className="text-lg font-bold">비밀번호 변경</h2>
                 </div>
                 <form
-                  className="mt-5 grid gap-4 md:grid-cols-3"
+                  className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3"
                   onSubmit={handlePasswordSubmit}
                 >
                   <PasswordInput
@@ -469,7 +471,7 @@ export function MyPageView() {
               </section>
             </div>
 
-            <aside className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+            <aside className="h-fit min-w-0 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold">바로가기</h2>
               <div className="mt-5 flex flex-col gap-2">
                 <QuickLink
@@ -505,7 +507,9 @@ function MemberInfo({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
       <dt className="text-sm font-medium text-neutral-500">{label}</dt>
-      <dd className="mt-2 font-semibold text-neutral-950">{value}</dd>
+      <dd className="mt-2 break-words font-semibold text-neutral-950">
+        {value}
+      </dd>
     </div>
   )
 }

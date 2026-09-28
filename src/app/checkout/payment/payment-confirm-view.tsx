@@ -59,6 +59,11 @@ type TossPayments = {
   widgets: (params: { customerKey: string }) => TossPaymentWidgets
 }
 
+type WidgetLoadState =
+  | { status: "loading" }
+  | { status: "ready" }
+  | { status: "error"; reason: "sdk" | "config" | "widget" }
+
 declare global {
   interface Window {
     TossPayments?: (clientKey: string) => TossPayments
@@ -67,6 +72,7 @@ declare global {
 
 const TOSS_SDK_URL = "https://js.tosspayments.com/v2/standard"
 const CUSTOMER_KEY_STORAGE_KEY = "coffeeprod:toss-customer-key"
+const WIDGET_PREPARATION_TIMEOUT_MS = 60_000
 
 export function PaymentConfirmView({
   orderId,
@@ -75,14 +81,24 @@ export function PaymentConfirmView({
   tossWidgetClientKey,
 }: PaymentConfirmViewProps) {
   const router = useRouter()
-  const [sdkReady, setSdkReady] = useState(false)
-  const [widgetReady, setWidgetReady] = useState(false)
+  const [sdkStatus, setSdkStatus] = useState<"loading" | "ready" | "error">(
+    "loading"
+  )
+  const [widgetLoad, setWidgetLoad] = useState<WidgetLoadState>({
+    status: "loading",
+  })
+  const [widgetAttempt, setWidgetAttempt] = useState(0)
   const [isRequesting, setIsRequesting] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [requestMessage, setRequestMessage] = useState<string | null>(null)
   const widgetsRef = useRef<TossPaymentWidgets | null>(null)
   const paymentMethodsRef = useRef<TossWidgetInstance | null>(null)
   const agreementRef = useRef<TossWidgetInstance | null>(null)
   const hasOrder = orderId !== null && tossOrderId !== null && amount !== null
+  const currentWidgetLoad: WidgetLoadState = !tossWidgetClientKey
+    ? { status: "error", reason: "config" }
+    : sdkStatus === "error"
+      ? { status: "error", reason: "sdk" }
+      : widgetLoad
   const orderName = useMemo(() => {
     if (orderId === null) {
       return "CoffeeProd 주문"
@@ -92,65 +108,88 @@ export function PaymentConfirmView({
   }, [orderId])
 
   useEffect(() => {
-    if (!sdkReady || !hasOrder || amount === null) {
+    if (!hasOrder || !tossWidgetClientKey || sdkStatus !== "loading") return
+
+    const timeoutId = window.setTimeout(() => {
+      setSdkStatus("error")
+    }, WIDGET_PREPARATION_TIMEOUT_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [hasOrder, sdkStatus, tossWidgetClientKey])
+
+  useEffect(() => {
+    if (!hasOrder || amount === null) {
       return
     }
 
-    let canceled = false
+    if (!tossWidgetClientKey || sdkStatus !== "ready") {
+      return
+    }
 
-    async function renderWidget() {
+    const widgetClientKey = tossWidgetClientKey
+    const widgetAmount = amount
+    let canceled = false
+    const timeoutId = window.setTimeout(() => {
+      canceled = true
       destroyWidget(paymentMethodsRef)
       destroyWidget(agreementRef)
-      setWidgetReady(false)
-      setMessage(null)
+      widgetsRef.current = null
+      setWidgetLoad({ status: "error", reason: "widget" })
+    }, WIDGET_PREPARATION_TIMEOUT_MS)
+
+    async function renderWidget() {
+      setWidgetLoad({ status: "loading" })
+      destroyWidget(paymentMethodsRef)
+      destroyWidget(agreementRef)
+      widgetsRef.current = null
 
       if (!window.TossPayments) {
-        setMessage("결제수단을 불러오지 못했습니다. 페이지를 새로고침해 주세요.")
-        return
-      }
-
-      if (!tossWidgetClientKey) {
-        setMessage(
-          "현재 결제를 이용할 수 없습니다. 잠시 후 주문 내역에서 다시 시도해 주세요."
-        )
+        window.clearTimeout(timeoutId)
+        setWidgetLoad({ status: "error", reason: "sdk" })
         return
       }
 
       try {
-        const tossPayments = window.TossPayments(tossWidgetClientKey)
+        const tossPayments = window.TossPayments(widgetClientKey)
         const widgets = tossPayments.widgets({
           customerKey: getOrCreateCustomerKey(),
         })
 
-        if (amount === null) return
-
         widgetsRef.current = widgets
-        await widgets.setAmount({ currency: "KRW", value: amount })
+        await widgets.setAmount({ currency: "KRW", value: widgetAmount })
+        if (canceled) return
 
-        const [paymentMethodsWidget, agreementWidget] = await Promise.all([
-          widgets.renderPaymentMethods({
-            selector: "#toss-payment-methods",
-            variantKey: "DEFAULT",
-          }),
-          widgets.renderAgreement({
-            selector: "#toss-payment-agreement",
-            variantKey: "AGREEMENT",
-          }),
-        ])
+        const paymentMethodsWidget = await widgets.renderPaymentMethods({
+          selector: "#toss-payment-methods",
+          variantKey: "DEFAULT",
+        })
 
         if (canceled) {
           paymentMethodsWidget.destroy()
-          agreementWidget.destroy()
           return
         }
 
         paymentMethodsRef.current = paymentMethodsWidget
+        const agreementWidget = await widgets.renderAgreement({
+          selector: "#toss-payment-agreement",
+          variantKey: "AGREEMENT",
+        })
+
+        if (canceled) {
+          agreementWidget.destroy()
+          return
+        }
+
         agreementRef.current = agreementWidget
-        setWidgetReady(true)
+        window.clearTimeout(timeoutId)
+        setWidgetLoad({ status: "ready" })
       } catch {
-        setMessage(
-          "결제수단을 준비하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요."
-        )
+        if (canceled) return
+        window.clearTimeout(timeoutId)
+        destroyWidget(paymentMethodsRef)
+        destroyWidget(agreementRef)
+        widgetsRef.current = null
+        setWidgetLoad({ status: "error", reason: "widget" })
       }
     }
 
@@ -158,14 +197,29 @@ export function PaymentConfirmView({
 
     return () => {
       canceled = true
+      window.clearTimeout(timeoutId)
       destroyWidget(paymentMethodsRef)
       destroyWidget(agreementRef)
+      widgetsRef.current = null
     }
-  }, [amount, hasOrder, sdkReady, tossWidgetClientKey])
+  }, [amount, hasOrder, sdkStatus, tossWidgetClientKey, widgetAttempt])
+
+  function handleWidgetRetry() {
+    if (currentWidgetLoad.status !== "error") return
+
+    if (currentWidgetLoad.reason !== "widget" || widgetAttempt > 0) {
+      window.location.reload()
+      return
+    }
+
+    setRequestMessage(null)
+    setWidgetLoad({ status: "loading" })
+    setWidgetAttempt((attempt) => attempt + 1)
+  }
 
   async function handlePaymentRequest() {
     if (orderId === null || tossOrderId === null || amount === null) {
-      setMessage("결제 요청에 필요한 주문 정보가 없습니다.")
+      setRequestMessage("결제 요청에 필요한 주문 정보가 없습니다.")
       return
     }
 
@@ -178,13 +232,13 @@ export function PaymentConfirmView({
       return
     }
 
-    if (!widgetsRef.current || !widgetReady) {
-      setMessage("결제수단을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.")
+    if (!widgetsRef.current || currentWidgetLoad.status !== "ready") {
+      setRequestMessage("결제수단을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.")
       return
     }
 
     setIsRequesting(true)
-    setMessage(null)
+    setRequestMessage(null)
 
     try {
       await widgetsRef.current.requestPayment({
@@ -194,7 +248,7 @@ export function PaymentConfirmView({
         failUrl: `${window.location.origin}/checkout/payment/fail?internalOrderId=${orderId}&amount=${amount}`,
       })
     } catch (error) {
-      setMessage(getTossErrorMessage(error))
+      setRequestMessage(getTossErrorMessage(error))
       setIsRequesting(false)
     }
   }
@@ -204,8 +258,10 @@ export function PaymentConfirmView({
       <Script
         src={TOSS_SDK_URL}
         strategy="afterInteractive"
-        onReady={() => setSdkReady(true)}
-        onError={() => setMessage("결제수단을 불러오지 못했습니다. 페이지를 새로고침해 주세요.")}
+        onReady={() =>
+          setSdkStatus((status) => (status === "error" ? status : "ready"))
+        }
+        onError={() => setSdkStatus("error")}
       />
 
       <div className="mx-auto w-full max-w-6xl px-6 py-8">
@@ -238,16 +294,36 @@ export function PaymentConfirmView({
             <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold">결제수단</h2>
-                {!widgetReady && hasOrder && (
-                  <span className="flex items-center gap-2 text-sm font-medium text-neutral-500">
-                    <LoaderCircle className="size-4 animate-spin" />
+                {currentWidgetLoad.status === "loading" && hasOrder && (
+                  <span
+                    className="flex items-center gap-2 text-sm font-medium text-neutral-500"
+                    role="status"
+                  >
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
                     결제수단 준비 중
                   </span>
                 )}
               </div>
 
-              {hasOrder ? (
+              {hasOrder && currentWidgetLoad.status === "error" ? (
                 <div
+                  key="widget-error"
+                  className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                  role="alert"
+                >
+                  <p>{getWidgetErrorMessage(currentWidgetLoad.reason)}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={handleWidgetRetry}
+                  >
+                    다시 시도
+                  </Button>
+                </div>
+              ) : hasOrder ? (
+                <div
+                  key="widget-container"
                   id="toss-payment-methods"
                   className="mt-4 min-h-72 overflow-hidden rounded-lg border border-neutral-100"
                 />
@@ -258,16 +334,18 @@ export function PaymentConfirmView({
               )}
             </section>
 
-            <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-bold">약관</h2>
-              {hasOrder ? (
-                <div id="toss-payment-agreement" className="mt-4" />
-              ) : (
-                <p className="mt-4 text-sm text-neutral-500">
-                  주문 정보가 확인되면 약관 영역이 표시됩니다.
-                </p>
-              )}
-            </section>
+            {(currentWidgetLoad.status !== "error" || !hasOrder) && (
+              <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-bold">약관</h2>
+                {hasOrder ? (
+                  <div id="toss-payment-agreement" className="mt-4" />
+                ) : (
+                  <p className="mt-4 text-sm text-neutral-500">
+                    주문 정보가 확인되면 약관 영역이 표시됩니다.
+                  </p>
+                )}
+              </section>
+            )}
           </section>
 
           <aside className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
@@ -287,19 +365,19 @@ export function PaymentConfirmView({
               </div>
             )}
 
-            {message && (
+            {requestMessage && (
               <p
                 className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
                 role="alert"
               >
-                {message}
+                {requestMessage}
               </p>
             )}
 
             <Button
               type="button"
               className="mt-5 w-full"
-              disabled={!hasOrder || !widgetReady || isRequesting}
+              disabled={!hasOrder || currentWidgetLoad.status !== "ready" || isRequesting}
               onClick={handlePaymentRequest}
             >
               {isRequesting ? (
@@ -352,6 +430,14 @@ function destroyWidget(ref: MutableRefObject<TossWidgetInstance | null>) {
   ref.current = null
 }
 
+function getWidgetErrorMessage(reason: "sdk" | "config" | "widget") {
+  if (reason === "config") {
+    return "현재 결제수단을 이용할 수 없습니다. 잠시 후 다시 시도해 주세요."
+  }
+
+  return "결제수단을 불러오지 못했습니다. 다시 시도해 주세요."
+}
+
 function getOrCreateCustomerKey() {
   const storedKey = window.localStorage.getItem(CUSTOMER_KEY_STORAGE_KEY)
 
@@ -371,14 +457,14 @@ function getOrCreateCustomerKey() {
 
 function getTossErrorMessage(error: unknown) {
   if (typeof error !== "object" || error === null) {
-    return "결제 요청을 처리하지 못했습니다."
+    return "결제 요청 결과를 확인하지 못했습니다. 주문 내역에서 상태를 확인해 주세요."
   }
 
-  const maybeError = error as { code?: string; message?: string }
+  const maybeError = error as { code?: string }
 
   if (maybeError.code === "USER_CANCEL") {
     return "결제가 취소되었습니다. 결제수단을 확인한 뒤 다시 시도해 주세요."
   }
 
-  return maybeError.message ?? "결제 요청을 처리하지 못했습니다."
+  return "결제 요청 결과를 확인하지 못했습니다. 주문 내역에서 상태를 확인해 주세요."
 }

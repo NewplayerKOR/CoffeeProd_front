@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react"
 
+import { OrderDateTime } from "@/components/order-date-time"
 import { Button } from "@/components/ui/button"
 import {
   getAdminOrders,
@@ -277,8 +278,10 @@ export function OrdersAdminView() {
                     {order.firstProductName}
                     {order.itemCount > 1
                       ? ` 외 ${order.itemCount - 1}건`
-                      : ""}{" "}
-                    · {order.orderDate}
+                      : ""}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500 tabular-nums">
+                    <OrderDateTime value={order.orderDate} />
                   </p>
                   <p className="mt-2 text-sm text-neutral-500">
                     결제금액 {order.totalPrice.toLocaleString()}원 · 사용

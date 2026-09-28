@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { OrderDateTime } from "@/components/order-date-time"
 import { Button } from "@/components/ui/button"
 import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
@@ -185,8 +186,8 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
                       </h1>
                       <OrderStatusPill status={order.status} />
                     </div>
-                    <p className="mt-2 text-sm text-neutral-500">
-                      {order.orderDate}
+                    <p className="mt-2 text-sm text-neutral-500 tabular-nums">
+                      <OrderDateTime value={order.orderDate} />
                     </p>
                   </div>
 
