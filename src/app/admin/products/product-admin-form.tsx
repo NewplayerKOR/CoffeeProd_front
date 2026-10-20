@@ -442,7 +442,9 @@ function TextField({
     <Field label={label} error={error}>
       <input
         name={name}
-        type={type}
+        // Let the shared URL policy normalize whitespace before validation.
+        type={type === "url" ? "text" : type}
+        inputMode={type === "url" ? "url" : undefined}
         min={min}
         maxLength={maxLength}
         value={value}
