@@ -24,6 +24,7 @@ import {
 } from "react"
 
 import { SiteFooter } from "@/components/site-footer"
+import { SocialAccountSettings } from "@/components/social-account-settings"
 import { SiteHeader } from "@/components/site-header"
 import { PasswordVisibilityButton } from "@/components/password-visibility-button"
 import { Button } from "@/components/ui/button"
@@ -391,7 +392,8 @@ export function MyPageView() {
                 </form>
               </section>
 
-              <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+              <SocialAccountSettings hasLocalPassword={member.hasLocalPassword !== false} />
+              {member.hasLocalPassword !== false && <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-2">
                   <KeyRound className="size-5 text-neutral-500" />
                   <h2 className="text-lg font-bold">비밀번호 변경</h2>
@@ -431,9 +433,9 @@ export function MyPageView() {
                     </Button>
                   </div>
                 </form>
-              </section>
+              </section>}
 
-              <section className="rounded-lg border border-red-200 bg-white p-5 shadow-sm">
+              {member.hasLocalPassword !== false && <section className="rounded-lg border border-red-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-2">
                   <Trash2 className="size-5 text-red-600" />
                   <h2 className="text-lg font-bold">회원 탈퇴</h2>
@@ -468,7 +470,7 @@ export function MyPageView() {
                     {isWithdrawing ? "탈퇴 처리 중" : "회원 탈퇴"}
                   </Button>
                 </form>
-              </section>
+              </section>}
             </div>
 
             <aside className="h-fit min-w-0 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">

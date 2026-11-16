@@ -6,6 +6,7 @@ export type MemberStatus = "ACTIVE" | "SUSPENDED" | "WITHDRAWN"
 export type MemberRole = "USER" | "ADMIN"
 
 export type Member = {
+  hasLocalPassword: boolean
   id: number
   email: string
   name: string
