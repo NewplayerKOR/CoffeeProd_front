@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { AiRecommendation } from "./ai-recommendation"
 import { RotateCcw, Save, Sparkles } from "lucide-react"
 import { type FormEvent, useState } from "react"
 
@@ -96,8 +97,11 @@ export function RecommendationsView({
           </p>
         </section>
 
+        <AiRecommendation />
+
         <section className="recommendation-layout grid gap-8 lg:grid-cols-[390px_minmax(0,1fr)]">
           <form
+            id="preference-form"
             className="recommendation-form h-fit border-y border-neutral-200 bg-white py-6"
             onSubmit={handleSubmit}
           >
