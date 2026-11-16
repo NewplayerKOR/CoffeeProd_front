@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { LoginForm } from "./login-form"
+import { SocialLogin } from "@/components/social-login"
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -33,6 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <LoginForm signupSuccess={signup === "success"} redirectTo={redirectTo} />
+          <SocialLogin />
 
           <p className="mt-6 text-center text-sm text-neutral-600">
             아직 계정이 없나요?{" "}
