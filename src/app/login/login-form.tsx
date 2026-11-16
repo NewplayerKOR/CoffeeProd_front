@@ -209,7 +209,7 @@ export function LoginForm({
             </p>
           )}
           <p className="mt-2 text-xs leading-5 text-neutral-500">
-            비밀번호 재설정은 현재 지원하지 않습니다. 계정에 접근할 수 없다면 사이트 운영자에게 문의해 주세요.
+            비밀번호를 잊으셨다면 가입 이메일 인증 후 새 비밀번호를 설정할 수 있습니다.
           </p>
         </div>
 
