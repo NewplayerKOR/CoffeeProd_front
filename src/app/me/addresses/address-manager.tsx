@@ -349,7 +349,7 @@ export function AddressManager() {
     <main className="account-page flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <Script
         id="daum-postcode-script"
-        src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
         strategy="afterInteractive"
         onReady={() => setIsPostcodeReady(true)}
         onError={() => {
