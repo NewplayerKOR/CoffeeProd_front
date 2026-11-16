@@ -34,6 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <LoginForm signupSuccess={signup === "success"} redirectTo={redirectTo} />
+          <Link href="/password-reset" className="mt-4 block py-2 text-center text-sm underline">비밀번호를 잊으셨나요?</Link>
           <SocialLogin />
 
           <p className="mt-6 text-center text-sm text-neutral-600">
