@@ -1,13 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react"
 import {
   type MouseEvent,
   type PointerEvent,
   useEffect,
+  useCallback,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -30,13 +32,35 @@ type HomeSliderProps = {
 
 export function HomeSlider({ slides }: HomeSliderProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(true)
+  const [isHovered, setIsHovered] = useState(false)
+  const rotationPointerStateRef = useRef<boolean | null>(null)
+  const rotationButtonRef = useRef<HTMLButtonElement>(null)
+  const previousButtonRef = useRef<HTMLButtonElement>(null)
+  const subscribeMotion = useCallback((onChange: () => void) => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+    function handleChange() {
+      if (query.matches && document.activeElement === rotationButtonRef.current) {
+        previousButtonRef.current?.focus({ preventScroll: true })
+      }
+      setIsPlaying(false)
+      onChange()
+    }
+    query.addEventListener("change", handleChange)
+    return () => query.removeEventListener("change", handleChange)
+  }, [])
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot
+  )
   const dragStartXRef = useRef<number | null>(null)
   const suppressClickRef = useRef(false)
   const safeSlides = slides.length > 0 ? slides : fallbackSlides
   const activeSlide = safeSlides[activeIndex] ?? safeSlides[0]
 
   useEffect(() => {
-    if (safeSlides.length <= 1) {
+    if (safeSlides.length <= 1 || !isPlaying || isHovered || prefersReducedMotion) {
       return
     }
 
@@ -47,9 +71,10 @@ export function HomeSlider({ slides }: HomeSliderProps) {
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [safeSlides.length])
+  }, [safeSlides.length, isPlaying, isHovered, prefersReducedMotion])
 
   function moveSlide(direction: -1 | 1) {
+    setIsPlaying(false)
     setActiveIndex((current) => {
       const nextIndex = current + direction
 
@@ -111,7 +136,16 @@ export function HomeSlider({ slides }: HomeSliderProps) {
   }
 
   return (
-    <section className="journal-slider">
+    <section
+      className="journal-slider"
+      aria-label="추천 콘텐츠"
+      aria-roledescription="슬라이드 모음"
+      onFocusCapture={() => setIsPlaying(false)}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setIsHovered(true)
+      }}
+      onPointerLeave={() => setIsHovered(false)}
+    >
       <div className="journal-slider-layout">
         <div
           className="journal-slider-media"
@@ -184,34 +218,74 @@ export function HomeSlider({ slides }: HomeSliderProps) {
               </Link>
             </Button>
 
-            <div className="journal-slider-counter">
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={(event) => handleControlClick(event, -1)}
-                aria-label="이전 슬라이드"
-              >
-                <ArrowLeft />
-              </Button>
-              <span>
-                {activeIndex + 1} / {safeSlides.length}
-              </span>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={(event) => handleControlClick(event, 1)}
-                aria-label="다음 슬라이드"
-              >
-                <ArrowRight />
-              </Button>
-            </div>
+            {safeSlides.length > 1 && (
+              <div className="journal-slider-controls">
+                {prefersReducedMotion ? (
+                  <p className="text-sm text-muted-foreground">
+                    동작 줄이기 설정으로 자동 재생을 멈췄습니다.
+                  </p>
+                ) : (
+                  <Button
+                    ref={rotationButtonRef}
+                    type="button"
+                    variant="outline"
+                    onPointerDown={() => {
+                      rotationPointerStateRef.current = isPlaying
+                    }}
+                    onPointerCancel={() => {
+                      rotationPointerStateRef.current = null
+                    }}
+                    onClick={(event) => {
+                      const wasPlaying = event.detail > 0
+                        ? rotationPointerStateRef.current ?? isPlaying
+                        : isPlaying
+                      rotationPointerStateRef.current = null
+                      setIsPlaying(!wasPlaying)
+                    }}
+                  >
+                    {isPlaying ? <Pause data-icon="inline-start" /> : <Play data-icon="inline-start" />}
+                    {isPlaying ? "자동 재생 정지" : "자동 재생"}
+                  </Button>
+                )}
+                <div className="journal-slider-counter">
+                  <Button
+                    ref={previousButtonRef}
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={(event) => handleControlClick(event, -1)}
+                    aria-label="이전 슬라이드"
+                  >
+                    <ArrowLeft />
+                  </Button>
+                  <span aria-live={isPlaying && !prefersReducedMotion ? "off" : "polite"} aria-atomic="true">
+                    {activeIndex + 1} / {safeSlides.length}
+                  </span>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={(event) => handleControlClick(event, 1)}
+                    aria-label="다음 슬라이드"
+                  >
+                    <ArrowRight />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </section>
   )
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+function getReducedMotionServerSnapshot() {
+  return true
 }
 
 const fallbackSlides: HomeSlide[] = [

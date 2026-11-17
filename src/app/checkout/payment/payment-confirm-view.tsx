@@ -299,7 +299,7 @@ export function PaymentConfirmView({
                     className="flex items-center gap-2 text-sm font-medium text-neutral-500"
                     role="status"
                   >
-                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    <LoaderCircle className="size-4 motion-safe:animate-spin" aria-hidden="true" />
                     결제수단 준비 중
                   </span>
                 )}
@@ -381,7 +381,7 @@ export function PaymentConfirmView({
               onClick={handlePaymentRequest}
             >
               {isRequesting ? (
-                <LoaderCircle data-icon="inline-start" className="animate-spin" />
+                <LoaderCircle data-icon="inline-start" className="motion-safe:animate-spin" />
               ) : (
                 <ReceiptText data-icon="inline-start" />
               )}

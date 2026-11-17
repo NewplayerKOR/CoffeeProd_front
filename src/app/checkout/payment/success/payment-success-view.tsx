@@ -70,7 +70,7 @@ export function PaymentSuccessView({
           {message ? (
             <ReceiptText className="size-8 text-red-600" />
           ) : (
-            <LoaderCircle className="size-8 animate-spin text-neutral-600" aria-hidden="true" />
+            <LoaderCircle className="size-8 motion-safe:animate-spin text-neutral-600" aria-hidden="true" />
           )}
           <div>
             <h1 className="text-2xl font-bold">
@@ -84,8 +84,8 @@ export function PaymentSuccessView({
             {message}
           </p>
         ) : (
-          <p className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm font-medium text-neutral-600">
-            <LoaderCircle className="size-4 animate-spin" />
+          <p role="status" className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm font-medium text-neutral-600">
+            <LoaderCircle className="size-4 motion-safe:animate-spin" />
             결제 결과를 확인하고 있습니다. 잠시만 기다려 주세요.
           </p>
         )}

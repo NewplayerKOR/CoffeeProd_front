@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { AiRecommendation } from "./ai-recommendation"
 import { RotateCcw, Save, Sparkles } from "lucide-react"
-import { type FormEvent, useState } from "react"
+import { type FormEvent, useEffect, useRef, useState } from "react"
 
 import {
   CoffeePreferenceFields,
@@ -43,10 +43,63 @@ export function RecommendationsView({
   >(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(initialReferenceError)
+  const [resultStatus, setResultStatus] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null)
+  const requestPendingRef = useRef(false)
+  const focusResultsRef = useRef(false)
   const isAuthenticated = status === "authenticated"
+
+  useEffect(() => {
+    if (!focusResultsRef.current || recommendations === null) return
+    focusResultsRef.current = false
+    resultHeadingRef.current?.focus({ preventScroll: true })
+    resultHeadingRef.current?.scrollIntoView({ block: "start" })
+  }, [recommendations])
+
+  async function requestRecommendations(request: () => Promise<CoffeeRecommendation[]>) {
+    if (requestPendingRef.current) return
+    requestPendingRef.current = true
+    setIsSubmitting(true)
+    setMessage(null)
+    setResultStatus("취향에 맞는 커피를 추천하고 있습니다.")
+    const trigger = document.activeElement
+    let shouldFocusResults = true
+    function trackInteraction(event: Event) {
+      if (event.target instanceof Node && !formRef.current?.contains(event.target)) {
+        shouldFocusResults = false
+      }
+    }
+    document.addEventListener("focusin", trackInteraction)
+    document.addEventListener("pointerdown", trackInteraction)
+
+    try {
+      const results = await request()
+      focusResultsRef.current = shouldFocusResults
+      setRecommendations(results)
+      setResultStatus(results.length > 0
+        ? `${results.length}개의 추천을 찾았습니다. 아래 추천 결과를 확인해 주세요.`
+        : "현재 조건에 맞는 판매 가능 상품이 없습니다. 조건을 바꿔 다시 추천받아 보세요.")
+    } catch (error) {
+      setMessage(getCoffeeErrorMessage(error))
+      setResultStatus("")
+      if (shouldFocusResults && document.activeElement === document.body && trigger instanceof HTMLElement) {
+        // disabled 버튼이 다시 활성화된 뒤 원래 요청 위치로 복귀한다.
+        requestAnimationFrame(() => {
+          if (document.activeElement === document.body && trigger.isConnected) trigger.focus()
+        })
+      }
+    } finally {
+      document.removeEventListener("focusin", trackInteraction)
+      document.removeEventListener("pointerdown", trackInteraction)
+      requestPendingRef.current = false
+      setIsSubmitting(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (requestPendingRef.current) return
     const payload = toCoffeePreferencePayload(form)
 
     if (!hasCoffeePreference(payload)) {
@@ -54,35 +107,19 @@ export function RecommendationsView({
       return
     }
 
-    setIsSubmitting(true)
-    setMessage(null)
-
-    try {
-      setRecommendations(await recommendCoffee({ ...payload, limit: 6 }))
-    } catch (error) {
-      setMessage(getCoffeeErrorMessage(error))
-    } finally {
-      setIsSubmitting(false)
-    }
+    await requestRecommendations(() => recommendCoffee({ ...payload, limit: 6 }))
   }
 
   async function handleMyRecommendation() {
-    setIsSubmitting(true)
-    setMessage(null)
-
-    try {
-      setRecommendations(await getMyCoffeeRecommendations(6))
-    } catch (error) {
-      setMessage(getCoffeeErrorMessage(error))
-    } finally {
-      setIsSubmitting(false)
-    }
+    await requestRecommendations(() => getMyCoffeeRecommendations(6))
   }
 
   function resetForm() {
+    if (requestPendingRef.current) return
     setForm(emptyCoffeePreferenceForm)
     setRecommendations(null)
     setMessage(null)
+    setResultStatus("")
   }
 
   return (
@@ -101,7 +138,9 @@ export function RecommendationsView({
 
         <section className="recommendation-layout grid gap-8 lg:grid-cols-[390px_minmax(0,1fr)]">
           <form
+            ref={formRef}
             id="preference-form"
+            aria-busy={isSubmitting}
             className="recommendation-form h-fit border-y border-neutral-200 bg-white py-6"
             onSubmit={handleSubmit}
           >
@@ -139,7 +178,7 @@ export function RecommendationsView({
                 <Sparkles data-icon="inline-start" />
                 {isSubmitting ? "추천 중" : "추천 받기"}
               </Button>
-              <Button type="button" variant="outline" onClick={resetForm}>
+              <Button type="button" variant="outline" disabled={isSubmitting} onClick={resetForm}>
                 <RotateCcw data-icon="inline-start" />
                 초기화
               </Button>
@@ -166,20 +205,32 @@ export function RecommendationsView({
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-neutral-500">Results</p>
-                <h2 className="mt-1 text-xl font-bold">추천 결과</h2>
+                <h2
+                  ref={resultHeadingRef}
+                  tabIndex={-1}
+                  className="mt-1 scroll-mt-24 text-xl font-bold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                >
+                  추천 결과{recommendations !== null ? ` ${recommendations.length}개` : ""}
+                </h2>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/coffee-profiles">커피 프로필 보기</Link>
               </Button>
             </div>
 
-            {recommendations === null ? (
-              <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-10 text-center text-sm leading-6 text-neutral-500">
-                취향 조건을 선택하면 추천 이유와 함께 상품을 보여드립니다.
-              </div>
-            ) : (
-              <CoffeeRecommendationResults recommendations={recommendations} />
-            )}
+            <p role="status" aria-atomic="true" className="mb-4 text-sm text-muted-foreground">
+              {resultStatus}
+            </p>
+
+            <div aria-busy={isSubmitting}>
+              {recommendations === null ? (
+                <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-10 text-center text-sm leading-6 text-neutral-500">
+                  취향 조건을 선택하면 추천 이유와 함께 상품을 보여드립니다.
+                </div>
+              ) : (
+                <CoffeeRecommendationResults recommendations={recommendations} />
+              )}
+            </div>
           </div>
         </section>
       </div>

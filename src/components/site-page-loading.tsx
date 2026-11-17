@@ -5,11 +5,11 @@ export function SitePageLoading({ detail = false }: { detail?: boolean }) {
   return (
     <main className="flex min-h-screen flex-col bg-neutral-50 text-neutral-950">
       <SiteHeader />
+      <p className="sr-only" role="status">페이지를 불러오는 중입니다.</p>
       <div
-        className="mx-auto w-full max-w-[1320px] flex-1 animate-pulse px-6 py-12"
+        className="mx-auto w-full max-w-[1320px] flex-1 motion-safe:animate-pulse px-6 py-12"
         aria-busy="true"
       >
-        <span className="sr-only">페이지를 불러오는 중입니다.</span>
         <div className="h-3 w-28 rounded-sm bg-neutral-200" />
         <div className="mt-4 h-10 w-full max-w-md rounded-sm bg-neutral-200" />
         <div className="mt-4 h-4 w-full max-w-xl rounded-sm bg-neutral-200" />

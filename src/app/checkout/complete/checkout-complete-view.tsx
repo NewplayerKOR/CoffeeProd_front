@@ -78,7 +78,7 @@ export function CheckoutCompleteView({ orderId }: { orderId: number | null }) {
         >
           <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
             {state.kind === "checking" && orderId !== null ? (
-              <LoaderCircle className="size-6 animate-spin text-neutral-700" aria-hidden="true" />
+              <LoaderCircle className="size-6 motion-safe:animate-spin text-neutral-700" aria-hidden="true" />
             ) : isPaid ? (
               <CircleCheck className="size-6 text-green-700" aria-hidden="true" />
             ) : (
