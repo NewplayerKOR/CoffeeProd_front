@@ -1851,6 +1851,10 @@ html.dark .home-hero-actions [data-variant="outline"] {
 }
 
 /* Authentication */
+.skip-content-target {
+  scroll-margin-top: 96px;
+}
+
 .auth-page {
   position: relative;
   isolation: isolate;

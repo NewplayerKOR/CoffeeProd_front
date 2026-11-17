@@ -8,13 +8,15 @@ import { SignupForm } from "./signup-form"
 export default function SignupPage() {
   return (
     <main className="auth-page min-h-screen bg-neutral-50 text-neutral-950">
-      <div className="fixed right-4 top-4 z-10">
-        <ThemeToggle />
-      </div>
       <div className="auth-shell mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
-        <Link href="/" className="site-wordmark mb-8 self-center">
-          CoffeeProd
-        </Link>
+        <div className="mb-8 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <Link href="/" className="site-wordmark col-start-2">
+            CoffeeProd
+          </Link>
+          <div className="justify-self-end">
+            <ThemeToggle />
+          </div>
+        </div>
 
         <section className="auth-panel rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
           <div className="mb-6 text-center">

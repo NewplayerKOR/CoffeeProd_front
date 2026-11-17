@@ -12,11 +12,13 @@ export function NavigationLink({ href, children }: { href: string; children: Rea
 
 export function SkipToContent() {
   return <a className="skip-to-content" href="#main-content" onClick={(event) => {
-    const main = document.querySelector<HTMLElement>("main")
-    if (!main) return
+    const target = document.querySelector<HTMLElement>("main h1")
+      ?? document.querySelector<HTMLElement>("main")
+    if (!target) return
     event.preventDefault()
-    main.tabIndex = -1
-    main.focus({ preventScroll: true })
-    main.scrollIntoView({ behavior: "instant", block: "start" })
+    target.tabIndex = -1
+    target.classList.add("skip-content-target")
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ behavior: "instant", block: "start" })
   }}>본문 바로가기</a>
 }

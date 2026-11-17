@@ -93,7 +93,7 @@ export default function AdminPage() {
                 <Button className="mt-5 w-full justify-start" asChild>
                   <Link href={item.href}>
                     <Settings data-icon="inline-start" />
-                    이동
+                    {item.title} 이동
                   </Link>
                 </Button>
               </article>
