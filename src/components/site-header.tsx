@@ -1,10 +1,10 @@
 import Link from "next/link"
-import { Menu } from "lucide-react"
 
 import { CartNavButton } from "@/app/cart/cart-nav-button"
 import { HomeAuthActions } from "@/app/home-auth-actions"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NavigationLink } from "@/components/navigation-link"
+import { SiteMobileMenu } from "@/components/site-mobile-menu"
 
 const navigation = [
   { href: "/about", label: "소개" },
@@ -39,23 +39,18 @@ export function SiteHeader() {
         <div className="site-mobile-actions">
           <CartNavButton iconOnly />
           <ThemeToggle />
-          <details className="site-mobile-menu">
-            <summary aria-label="메뉴 열기">
-              <Menu />
-            </summary>
-            <div className="site-mobile-menu-panel">
-              <nav aria-label="모바일 주요 메뉴">
-                {navigation.map((item) => (
-                  <NavigationLink key={item.href} href={item.href}>
-                    {item.label}
-                  </NavigationLink>
-                ))}
-              </nav>
-              <div className="site-mobile-account">
-                <HomeAuthActions />
-              </div>
+          <SiteMobileMenu>
+            <nav aria-label="모바일 주요 메뉴">
+              {navigation.map((item) => (
+                <NavigationLink key={item.href} href={item.href}>
+                  {item.label}
+                </NavigationLink>
+              ))}
+            </nav>
+            <div className="site-mobile-account">
+              <HomeAuthActions />
             </div>
-          </details>
+          </SiteMobileMenu>
         </div>
       </div>
     </header>

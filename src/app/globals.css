@@ -316,7 +316,7 @@ html.dark .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.22); }
   position: relative;
 }
 
-.site-mobile-menu summary {
+.site-mobile-menu-trigger {
   display: grid;
   width: 44px;
   height: 44px;
@@ -326,15 +326,11 @@ html.dark .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.22); }
   border-radius: var(--radius);
 }
 
-.site-mobile-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.site-mobile-menu summary:hover {
+.site-mobile-menu-trigger:hover {
   background: var(--muted);
 }
 
-.site-mobile-menu summary svg {
+.site-mobile-menu-trigger svg {
   width: 19px;
   height: 19px;
 }
@@ -344,6 +340,9 @@ html.dark .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.22); }
   top: calc(100% + 12px);
   right: 0;
   width: min(320px, calc(100vw - 32px));
+  max-height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -373,6 +372,12 @@ html.dark .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.22); }
 
 .site-mobile-account > div > * {
   width: 100%;
+}
+
+.site-mobile-account > div > span {
+  height: auto;
+  min-height: 32px;
+  overflow-wrap: anywhere;
 }
 
 .site-footer {
