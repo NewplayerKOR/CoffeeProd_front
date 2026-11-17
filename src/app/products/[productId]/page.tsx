@@ -271,14 +271,15 @@ async function ProductDetailTab({
           <Truck className="size-5 text-neutral-500" />
           <h2 className="text-xl font-bold">배송 정보</h2>
         </div>
-        <ul className="mt-5 flex flex-col gap-2 text-sm leading-6 text-neutral-600">
+        <p className="mt-5 text-sm leading-6 text-neutral-600">
+          포트폴리오의 주문·배송비 계산 예시입니다. 실제 판매와 배송은 진행하지 않습니다.
+        </p>
+        <ul className="mt-3 flex flex-col gap-2 text-sm leading-6 text-neutral-600">
           <li>
-            배송비는 {DELIVERY_BASE_FEE.toLocaleString()}원이며 상품 금액{" "}
+            예시 배송비는 {DELIVERY_BASE_FEE.toLocaleString()}원이며 상품 금액{" "}
             {DELIVERY_FREE_THRESHOLD.toLocaleString()}원 이상 구매 시 무료
-            배송입니다.
+            배송으로 계산합니다.
           </li>
-          <li>평일 오전 주문 건은 영업일 기준 1-2일 안에 출고됩니다.</li>
-          <li>제주 및 도서산간 지역은 추가 배송비가 발생할 수 있습니다.</li>
         </ul>
       </section>
     )

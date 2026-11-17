@@ -184,8 +184,7 @@ export function CoffeePreferenceView({
                 </h2>
               </div>
               <p className="mt-2 text-sm leading-6 text-neutral-500">
-                PUT 방식으로 전체 저장되므로 비워 둔 값은 선호 없음으로
-                변경됩니다.
+                비워 둔 항목은 선호 없음으로 저장됩니다.
               </p>
 
               <div className="mt-5">

@@ -329,7 +329,6 @@ export function MyPageView() {
                     label="상태"
                     value={getStatusLabel(member.status)}
                   />
-                  <MemberInfo label="회원 번호" value={String(member.id)} />
                 </dl>
               </section>
 
@@ -441,7 +440,7 @@ export function MyPageView() {
                   <h2 className="text-lg font-bold">회원 탈퇴</h2>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  탈퇴 후 현재 토큰은 제거되며, 같은 계정으로 로그인할 수 없습니다.
+                  탈퇴하면 로그인이 종료되며, 같은 계정으로 로그인할 수 없습니다.
                 </p>
                 <form
                   className="mt-5 flex flex-col gap-4 md:max-w-md"

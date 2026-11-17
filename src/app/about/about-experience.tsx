@@ -8,7 +8,6 @@ import {
   MapPin,
   PackageCheck,
   ShoppingCart,
-  Truck,
 } from "lucide-react"
 import {
   type ReactNode,
@@ -34,13 +33,13 @@ const values = [
   {
     title: "주문이 편안해지는 순간",
     description:
-      "원하는 분쇄도와 수량을 고르고, 익숙한 배송지로 부담 없이 주문을 이어갑니다.",
+      "원하는 분쇄도와 수량을 고르고, 배송지를 입력하는 주문 과정을 체험해 보세요.",
     icon: ShoppingCart,
   },
   {
-    title: "기다림마저 설레는 순간",
+    title: "주문 흐름을 경험하는 순간",
     description:
-      "안심할 수 있는 결제부터 문 앞에 도착하는 순간까지, 주문의 여정을 함께합니다.",
+      "결제와 주문 내역 확인까지, 포트폴리오에 구현한 구매 흐름을 살펴보세요. 실제 판매와 배송은 진행하지 않습니다.",
     icon: CreditCard,
   },
 ]
@@ -49,8 +48,8 @@ const flowSteps = [
   { label: "원두 고르기", icon: Coffee },
   { label: "취향 담기", icon: ShoppingCart },
   { label: "배송지 선택", icon: MapPin },
-  { label: "편안한 결제", icon: CreditCard },
-  { label: "설레는 배송", icon: Truck },
+  { label: "결제 과정 체험", icon: CreditCard },
+  { label: "주문 내역 확인", icon: PackageCheck },
 ]
 
 const sections = [
@@ -599,9 +598,7 @@ export function AboutExperience() {
               좋은 경험은 주문 이후에도 이어집니다.
             </h2>
             <p className="about-copy-muted mt-6 text-base leading-8">
-              장바구니에 담은 순간부터 결제와 배송을 기다리는 시간까지,
-              CoffeeProd는 필요한 정보를 놓치지 않고 다음 순간을 자연스럽게
-              안내합니다.
+              장바구니부터 결제와 주문 내역 확인까지, CoffeeProd에 구현한 흐름을 체험해 보세요. 실제 판매와 배송은 진행하지 않습니다.
             </p>
             <Button className="mt-8" asChild>
               <Link href="/products">

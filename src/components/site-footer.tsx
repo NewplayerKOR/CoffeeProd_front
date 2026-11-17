@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Mail } from "lucide-react"
 
 const footerLinks = [
   { href: "/about", label: "소개" },
@@ -33,11 +32,8 @@ export function SiteFooter() {
 
         <div className="site-footer-contact">
           <p className="site-footer-label">고객센터</p>
-          <p>
-            <Mail />
-            support@coffeeprod.example
-          </p>
-          <p>평일 10:00 - 17:00</p>
+          <p>문의 채널 준비 중</p>
+          <p>실제 판매와 배송은 진행하지 않습니다.</p>
         </div>
       </div>
       <div className="site-footer-legal">
