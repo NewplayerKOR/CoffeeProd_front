@@ -139,7 +139,11 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(reviewId: number) {
-    if (!(await confirmAction("이 리뷰를 삭제할까요? 삭제한 내용은 복구할 수 없습니다."))) return
+    if (!(await confirmAction({
+      title: "리뷰 삭제",
+      description: `“${reviews?.content.find((review) => review.id === reviewId)?.content.slice(0, 60) ?? "선택한 리뷰"}” 리뷰를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.`,
+      confirmLabel: "리뷰 삭제",
+    }))) return
     setIsSubmitting(true)
     setMessage(null)
 
@@ -403,7 +407,11 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(qnaId: number) {
-    if (!(await confirmAction("이 상품 문의를 삭제할까요? 삭제한 내용은 복구할 수 없습니다."))) return
+    if (!(await confirmAction({
+      title: "상품 문의 삭제",
+      description: `“${qnas?.content.find((qna) => qna.id === qnaId)?.title ?? "선택한 문의"}” 문의를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.`,
+      confirmLabel: "상품 문의 삭제",
+    }))) return
     setIsSubmitting(true)
     setMessage(null)
 

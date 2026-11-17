@@ -154,7 +154,11 @@ export function OrdersAdminView() {
       return
     }
 
-    if (!(await confirmAction(`주문 ${order.orderId}의 상태를 변경할까요? 배송과 주문 처리에 반영되며 현재 상태로 되돌리지 못할 수 있습니다.`))) return
+    if (!(await confirmAction({
+      title: `주문 ${order.orderId} 상태 변경`,
+      description: "배송과 주문 처리에 반영되며 현재 상태로 되돌리지 못할 수 있습니다.",
+      confirmLabel: "주문 상태 변경",
+    }))) return
     setPendingOrderId(order.orderId)
     setMessage(null)
 

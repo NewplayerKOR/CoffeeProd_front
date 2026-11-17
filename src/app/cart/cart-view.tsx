@@ -107,7 +107,11 @@ export function CartView() {
   }
 
   async function handleDeleteItem(cartItemId: number) {
-    if (!(await confirmAction("장바구니에서 이 상품을 삭제할까요? 삭제 후 상품을 다시 담을 수 있습니다."))) return
+    if (!(await confirmAction({
+      title: `${currentCart.items.find((item) => item.cartItemId === cartItemId)?.productName ?? "선택한 상품"} 삭제`,
+      description: "장바구니에서 삭제합니다. 삭제 후 상품을 다시 담을 수 있습니다.",
+      confirmLabel: "장바구니에서 삭제",
+    }))) return
     setPendingItemId(cartItemId)
     setMessage(null)
 
@@ -122,7 +126,11 @@ export function CartView() {
   }
 
   async function handleClearCart() {
-    if (!(await confirmAction("장바구니의 모든 상품을 삭제할까요? 현재 수량과 분쇄 옵션은 복구되지 않습니다."))) return
+    if (!(await confirmAction({
+      title: "장바구니 전체 삭제",
+      description: `장바구니의 모든 상품 ${currentCart.totalQuantity}개를 삭제합니다. 현재 수량과 분쇄 옵션은 복구되지 않습니다.`,
+      confirmLabel: "장바구니 비우기",
+    }))) return
     setIsClearing(true)
     setMessage(null)
 

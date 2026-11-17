@@ -155,7 +155,11 @@ export function AdminCategoriesView() {
   }
 
   async function handleDelete(category: Category) {
-    if (!(await confirmAction("선택한 카테고리를 삭제할까요? 삭제 후에는 복구할 수 없습니다."))) return
+    if (!(await confirmAction({
+      title: `${category.name} 카테고리 삭제`,
+      description: `${category.name} 카테고리를 삭제하면 복구할 수 없습니다.`,
+      confirmLabel: "카테고리 삭제",
+    }))) return
     setPendingCategoryId(category.id)
     setMessage(null)
 

@@ -138,7 +138,11 @@ export function ProductsAdminView() {
   }
 
   async function handleStatusSubmit(product: ProductListItem) {
-    if (!(await confirmAction(`${product.name}의 판매 상태를 변경할까요? 고객에게 표시되는 상태가 바뀌며 복원하려면 다시 변경해야 합니다.`))) return
+    if (!(await confirmAction({
+      title: `${product.name} 판매 상태 변경`,
+      description: `${getStatusLabel(statusDrafts[product.id] ?? product.status)} 상태로 변경합니다. 고객에게 표시되는 상태가 바뀌며 복원하려면 다시 변경해야 합니다.`,
+      confirmLabel: "판매 상태 변경",
+    }))) return
     const status = statusDrafts[product.id] ?? product.status
 
     setPendingAction({ productId: product.id, type: "status" })
@@ -200,7 +204,11 @@ export function ProductsAdminView() {
   }
 
   async function handleDeleteProduct(product: ProductListItem) {
-    if (!(await confirmAction(`${product.name} 상품을 삭제할까요? 판매 목록에서 제외되며 이 화면에서 복구할 수 없습니다.`))) return
+    if (!(await confirmAction({
+      title: `${product.name} 상품 삭제`,
+      description: "판매 목록에서 제외되며 이 화면에서 복구할 수 없습니다.",
+      confirmLabel: "상품 삭제",
+    }))) return
     setPendingAction({ productId: product.id, type: "delete" })
     setMessage(null)
 

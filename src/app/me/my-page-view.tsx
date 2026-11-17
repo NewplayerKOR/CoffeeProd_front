@@ -20,6 +20,7 @@ import {
   type ComponentType,
   type FormEvent,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -28,6 +29,7 @@ import { SocialAccountSettings } from "@/components/social-account-settings"
 import { SiteHeader } from "@/components/site-header"
 import { PasswordVisibilityButton } from "@/components/password-visibility-button"
 import { Button } from "@/components/ui/button"
+import { useModalDialog } from "@/components/use-modal-dialog"
 import { getMe, type Member, type MemberGrade, type MemberStatus } from "@/lib/api/auth"
 import {
   clearStoredAuthTokens,
@@ -78,6 +80,8 @@ export function MyPageView() {
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [withdrawDialog, setWithdrawDialog] = useState<WithdrawDialog>(null)
+  const withdrawPendingRef = useRef(false)
+  const withdrawSubmitRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isActive = true
@@ -226,6 +230,8 @@ export function MyPageView() {
   }
 
   async function executeWithdraw() {
+    if (withdrawPendingRef.current) return
+    withdrawPendingRef.current = true
     setIsWithdrawing(true)
     setMessage(null)
 
@@ -236,9 +242,6 @@ export function MyPageView() {
       clearStoredAuthTokens()
       setWithdrawDialog("success")
 
-      window.setTimeout(() => {
-        router.replace("/")
-      }, 1500)
     } catch (error) {
       if (error instanceof ApiError && error.errors?.length) {
         setWithdrawErrors(
@@ -249,7 +252,14 @@ export function MyPageView() {
       setMessageTone("error")
       setMessage(getMemberErrorMessage(error))
       setWithdrawDialog(null)
+      // 처리 중 비활성화된 호출 버튼은 native 초점 복귀에서 제외될 수 있다.
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body) {
+          withdrawSubmitRef.current?.focus({ preventScroll: true })
+        }
+      })
     } finally {
+      withdrawPendingRef.current = false
       setIsWithdrawing(false)
     }
   }
@@ -460,6 +470,7 @@ export function MyPageView() {
                     }}
                   />
                   <Button
+                    ref={withdrawSubmitRef}
                     type="submit"
                     variant="destructive"
                     disabled={isWithdrawing}
@@ -499,7 +510,7 @@ export function MyPageView() {
         />
       )}
 
-      {withdrawDialog === "success" && <WithdrawSuccessDialog />}
+      {withdrawDialog === "success" && <WithdrawSuccessDialog onDismiss={() => router.replace("/")} />}
     </main>
   )
 }
@@ -601,92 +612,101 @@ function WithdrawConfirmDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useModalDialog(dialog)
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-6">
-      <section
-        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="withdraw-confirm-title"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-red-50">
-              <AlertTriangle className="size-5 text-red-600" />
-            </div>
-            <div>
-              <h2 id="withdraw-confirm-title" className="text-lg font-bold">
-                정말 탈퇴하시겠습니까?
-              </h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                탈퇴 후 계정 이용이 제한됩니다.
-              </p>
-            </div>
+    <dialog
+      ref={dialog}
+      className="app-modal-dialog"
+      aria-labelledby="withdraw-confirm-title"
+      aria-describedby="withdraw-confirm-description"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!isSubmitting) onCancel()
+      }}
+      onClose={() => {
+        if (!dialog.current?.open && !isSubmitting) onCancel()
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-full bg-red-50">
+            <AlertTriangle className="size-5 text-red-600" />
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            disabled={isSubmitting}
-            onClick={onCancel}
-            aria-label="닫기"
-          >
-            <X />
-          </Button>
+          <div>
+            <h2 id="withdraw-confirm-title" className="text-lg font-bold">
+              정말 탈퇴하시겠습니까?
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              탈퇴 후 계정 이용이 제한됩니다.
+            </p>
+          </div>
         </div>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          disabled={isSubmitting}
+          onClick={onCancel}
+          aria-label="닫기"
+        >
+          <X />
+        </Button>
+      </div>
 
-        <p className="mt-5 rounded-lg bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-          주문 내역과 계정 상태가 탈퇴 처리됩니다. 계속 진행하려면 아래
-          버튼을 눌러 주세요.
-        </p>
+      <p id="withdraw-confirm-description" className="mt-5 rounded-lg bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
+        탈퇴하면 로그인이 종료되며, 같은 계정으로 로그인할 수 없습니다.
+      </p>
+      {isSubmitting && <p role="status" className="mt-3 text-sm">탈퇴 처리 중입니다. 결과를 확인할 때까지 기다려 주세요.</p>}
 
-        <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={onCancel}
-          >
-            취소
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={isSubmitting}
-            onClick={onConfirm}
-          >
-            <LogOut data-icon="inline-start" />
-            {isSubmitting ? "탈퇴 처리 중" : "탈퇴하기"}
-          </Button>
-        </div>
-      </section>
-    </div>
+      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        <Button
+          data-modal-autofocus
+          type="button"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={onCancel}
+        >
+          취소
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          disabled={isSubmitting}
+          onClick={onConfirm}
+        >
+          <LogOut data-icon="inline-start" />
+          {isSubmitting ? "탈퇴 처리 중" : "탈퇴하기"}
+        </Button>
+      </div>
+    </dialog>
   )
 }
 
-function WithdrawSuccessDialog() {
+function WithdrawSuccessDialog({ onDismiss }: { onDismiss: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useModalDialog(dialog)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-6">
-      <section
-        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-6 text-center shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="withdraw-success-title"
-      >
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-50">
-          <CheckCircle2 className="size-6 text-green-600" />
-        </div>
-        <h2 id="withdraw-success-title" className="mt-5 text-xl font-bold">
-          회원 탈퇴가 완료되었습니다.
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-neutral-600">
-          그동안 CoffeeProd를 이용해 주셔서 감사합니다.
-        </p>
-        <p className="mt-4 text-xs font-medium text-neutral-500">
-          잠시 후 메인 화면으로 이동합니다.
-        </p>
-      </section>
-    </div>
+    <dialog
+      ref={dialog}
+      className="app-modal-dialog text-center"
+      aria-labelledby="withdraw-success-title"
+      aria-describedby="withdraw-success-description"
+      onCancel={(event) => { event.preventDefault(); onDismiss() }}
+      onClose={() => { if (!dialog.current?.open) onDismiss() }}
+    >
+      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-50">
+        <CheckCircle2 className="size-6 text-green-600" />
+      </div>
+      <h2 id="withdraw-success-title" className="mt-5 text-xl font-bold">
+        회원 탈퇴가 완료되었습니다.
+      </h2>
+      <p id="withdraw-success-description" className="mt-3 text-sm leading-6 text-neutral-600">
+        그동안 CoffeeProd를 이용해 주셔서 감사합니다.
+      </p>
+      <Button data-modal-autofocus type="button" className="mt-6" onClick={onDismiss}>메인으로 이동</Button>
+    </dialog>
   )
 }
 

@@ -156,7 +156,11 @@ export function MembersAdminView() {
   }
 
   async function handleGradeSubmit(member: Member) {
-    if (!(await confirmAction(`회원 ${member.id}의 등급을 변경할까요? 복원하려면 등급을 다시 변경해야 합니다.`))) return
+    if (!(await confirmAction({
+      title: `${member.nickname} 회원 등급 변경`,
+      description: `회원 ${member.id}의 등급을 변경합니다. 복원하려면 등급을 다시 변경해야 합니다.`,
+      confirmLabel: "회원 등급 변경",
+    }))) return
     const grade = gradeDrafts[member.id] ?? member.grade
 
     setPendingAction({ memberId: member.id, type: "grade" })
@@ -177,7 +181,11 @@ export function MembersAdminView() {
   }
 
   async function handleStatusSubmit(member: Member) {
-    if (!(await confirmAction(`회원 ${member.id}의 상태를 변경할까요? 서비스 이용이 제한될 수 있으며 복원하려면 다시 변경해야 합니다.`))) return
+    if (!(await confirmAction({
+      title: `${member.nickname} 회원 상태 변경`,
+      description: `회원 ${member.id}의 상태를 변경합니다. 서비스 이용이 제한될 수 있으며 복원하려면 다시 변경해야 합니다.`,
+      confirmLabel: "회원 상태 변경",
+    }))) return
     if (member.status === "WITHDRAWN") {
       return
     }

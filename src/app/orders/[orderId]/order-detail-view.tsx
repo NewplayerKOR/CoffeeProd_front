@@ -83,7 +83,11 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   }, [orderId])
 
   async function handleCancelOrder() {
-    if (!(await confirmAction("이 주문을 취소할까요? 취소 후에는 이 주문으로 결제를 이어갈 수 없습니다."))) return
+    if (!(await confirmAction({
+      title: `주문 ${orderId} 취소`,
+      description: "취소 후에는 이 주문으로 결제를 이어갈 수 없습니다.",
+      confirmLabel: "주문 취소",
+    }))) return
     if (!order || !canCancelOrder(order.status)) {
       return
     }

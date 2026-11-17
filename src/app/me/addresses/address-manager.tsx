@@ -323,7 +323,11 @@ export function AddressManager() {
   }
 
   async function handleDelete(addressId: number) {
-    if (!(await confirmAction("이 배송지를 삭제할까요? 삭제한 배송지는 복구되지 않으며 다시 등록해야 합니다."))) return
+    if (!(await confirmAction({
+      title: `${addresses.find((address) => address.id === addressId)?.recipient ?? "선택한 수령인"} 님 배송지 삭제`,
+      description: `${addresses.find((address) => address.id === addressId)?.addressLine1 ?? "선택한 주소"} 배송지를 삭제합니다. 삭제한 배송지는 복구되지 않으며 다시 등록해야 합니다.`,
+      confirmLabel: "배송지 삭제",
+    }))) return
     setPendingAddressId(addressId)
     setMessage(null)
 

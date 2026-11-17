@@ -2439,6 +2439,30 @@ main:not(.home-page) textarea::placeholder {
   }
 }
 
-html:has(.catalog-filter-dialog[open]) {
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
   overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-modal-dialog {
+  width: calc(100% - 2rem);
+  max-width: 28rem;
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 24px;
+  box-shadow: 0 20px 25px rgb(0 0 0 / 0.15);
+}
+
+.app-modal-dialog::backdrop {
+  background: rgb(0 0 0 / 50%);
 }
