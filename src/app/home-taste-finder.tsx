@@ -146,12 +146,13 @@ export function HomeTasteFinder({
               <input
                 type="checkbox"
                 checked={taste.decaf}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const { checked } = event.currentTarget
                   setTaste((current) => ({
                     ...current,
-                    decaf: event.currentTarget.checked,
+                    decaf: checked,
                   }))
-                }
+                }}
               />
               <span aria-hidden="true" />
             </label>

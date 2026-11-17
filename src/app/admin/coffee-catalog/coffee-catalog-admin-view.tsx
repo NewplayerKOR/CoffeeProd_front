@@ -390,12 +390,13 @@ export function CoffeeCatalogAdminView() {
               disabled={isSubmitting || editingReferenceId !== null}
               className={`${inputClassName} mt-2 uppercase`}
               placeholder="예: WASHED"
-              onChange={(event) =>
+              onChange={(event) => {
+                const { value } = event.currentTarget
                 setReferenceDraft((current) => ({
                   ...current,
-                  code: event.currentTarget.value,
+                  code: value,
                 }))
-              }
+              }}
             />
 
             <label className="mt-4 block text-sm font-semibold" htmlFor="reference-name">
@@ -407,12 +408,13 @@ export function CoffeeCatalogAdminView() {
               maxLength={100}
               disabled={isSubmitting}
               className={`${inputClassName} mt-2`}
-              onChange={(event) =>
+              onChange={(event) => {
+                const { value } = event.currentTarget
                 setReferenceDraft((current) => ({
                   ...current,
-                  name: event.currentTarget.value,
+                  name: value,
                 }))
-              }
+              }}
             />
 
             <label
@@ -427,12 +429,13 @@ export function CoffeeCatalogAdminView() {
               maxLength={500}
               disabled={isSubmitting}
               className={`${textareaClassName} mt-2`}
-              onChange={(event) =>
+              onChange={(event) => {
+                const { value } = event.currentTarget
                 setReferenceDraft((current) => ({
                   ...current,
-                  description: event.currentTarget.value,
+                  description: value,
                 }))
-              }
+              }}
             />
 
             <div className="mt-4 flex gap-2">
