@@ -25,17 +25,17 @@ export function CoffeeRecommendationResults({
         <Link
           key={item.productId}
           href={`/products/${item.productId}`}
-          className="recommendation-card group overflow-hidden bg-white transition-colors"
+          className="recommendation-card group min-w-0 overflow-hidden bg-white transition-colors"
         >
           <ProductImage
             src={item.imageUrl}
             alt={item.name}
-            className="aspect-[16/9] w-full object-cover"
+            className="aspect-[16/9] h-auto w-full object-cover"
             sizes="(max-width: 767px) 100vw, 50vw"
           />
-          <div className="p-5">
+          <div className="break-words p-5">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-medium text-neutral-500">
                   {item.categoryName} · {item.weightGrams}g
                 </p>
