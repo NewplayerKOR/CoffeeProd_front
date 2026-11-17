@@ -46,19 +46,6 @@ export default async function CoffeeProfilesPage({
           </Button>
         </section>
 
-        <section className="mb-8 border-y border-neutral-200 py-6">
-          <div className="mb-4">
-            <p className="text-sm font-medium text-neutral-500">Coffee Data</p>
-            <h2 className="mt-1 text-xl font-bold">커피 데이터 가이드</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <ReferenceGroup title="가공 방식" references={result.references.processingMethods} />
-            <ReferenceGroup title="향미" references={result.references.flavorNotes} />
-            <ReferenceGroup title="추천 추출" references={result.references.brewMethods} />
-            <ReferenceGroup title="품종" references={result.references.varieties} />
-          </div>
-        </section>
-
         {result.error ? (
           <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
             {result.error}
@@ -139,6 +126,20 @@ export default async function CoffeeProfilesPage({
             )}
           </>
         )}
+
+        <section className="mt-10 border-y border-neutral-200 py-6">
+          <div className="mb-4">
+            <p className="text-sm font-medium text-neutral-500">Coffee Data</p>
+            <h2 className="mt-1 text-xl font-bold">커피 데이터 가이드</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ReferenceGroup title="가공 방식" references={result.references.processingMethods} />
+            <ReferenceGroup title="향미" references={result.references.flavorNotes} />
+            <ReferenceGroup title="추천 추출" references={result.references.brewMethods} />
+            <ReferenceGroup title="품종" references={result.references.varieties} />
+          </div>
+        </section>
+
       </div>
       <SiteFooter />
     </main>

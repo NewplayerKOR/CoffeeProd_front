@@ -117,7 +117,7 @@ export default async function ProductDetailPage({
           </div>
         </div>
 
-        <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="min-w-0 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
             <ProductStatusPill status={product.status} />
             <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
@@ -128,7 +128,7 @@ export default async function ProductDetailPage({
             </span>
           </div>
 
-          <h1 className="mt-4 text-3xl font-bold">{product.name}</h1>
+          <h1 className="mt-4 break-words text-3xl font-bold">{product.name}</h1>
 
           {product.coffeeProfile && (
             <Link
@@ -139,33 +139,15 @@ export default async function ProductDetailPage({
             </Link>
           )}
 
-          <p className="mt-4 leading-7 text-neutral-600">
-            {product.description}
-          </p>
-
-          <div className="mt-6 grid gap-4 border-y border-neutral-200 py-5">
-            <ProductInfoRow label="상품 번호" value={String(product.id)} />
-            <ProductInfoRow label="SKU" value={product.sku} />
-            <ProductInfoRow label="중량" value={`${product.weightGrams}g`} />
-            <ProductInfoRow label="카테고리" value={product.categoryName} />
-            <ProductInfoRow
-              label="로스팅"
-              value={getRoastLevelLabel(product.roastLevel)}
-            />
-            <ProductInfoRow
-              label="재고"
-              value={
-                product.stockQuantity > 0
-                  ? `${product.stockQuantity.toLocaleString()}개`
-                  : "품절"
-              }
-            />
-          </div>
-
           <div className="mt-6">
             <p className="text-sm text-neutral-500">판매가</p>
             <p className="mt-1 text-3xl font-bold">
               {product.price.toLocaleString()}원
+            </p>
+            <p className="mt-2 text-sm text-neutral-500">
+              {product.weightGrams}g · {product.stockQuantity > 0
+                ? `남은 수량 ${product.stockQuantity.toLocaleString()}개`
+                : "품절"}
             </p>
           </div>
 
@@ -222,15 +204,6 @@ function ProductDetailShell({ children }: { children: React.ReactNode }) {
       </div>
       <SiteFooter />
     </main>
-  )
-}
-
-function ProductInfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="font-medium text-neutral-500">{label}</span>
-      <span className="text-right font-semibold text-neutral-900">{value}</span>
-    </div>
   )
 }
 
@@ -320,7 +293,6 @@ async function ProductDetailTab({
       <p className="mt-4 leading-7 text-neutral-600">{product.description}</p>
       <dl className="mt-6 grid gap-4 rounded-lg border border-neutral-200 p-5 text-sm md:grid-cols-2">
         <ProductSpec label="상품명" value={product.name} />
-        <ProductSpec label="SKU" value={product.sku} />
         <ProductSpec label="중량" value={`${product.weightGrams}g`} />
         <ProductSpec label="카테고리" value={product.categoryName} />
         <ProductSpec label="로스팅" value={getRoastLevelLabel(product.roastLevel)} />

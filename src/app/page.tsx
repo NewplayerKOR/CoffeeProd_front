@@ -112,7 +112,7 @@ export default async function Home() {
                   </p>
                   <h3>{product.name}</h3>
                   <span>
-                    {product.coffeeProfileName ?? product.sku} · {product.weightGrams}g
+                    {product.coffeeProfileName || "취향에 맞는 원두를 살펴보세요"} · {product.weightGrams}g
                   </span>
                   <strong>{product.price.toLocaleString()}원</strong>
                 </div>

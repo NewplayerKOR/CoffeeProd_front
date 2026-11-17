@@ -391,11 +391,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   </span>
                 </div>
 
-                <h2 className="mobile-line-clamp-2 catalog-card-title text-sm font-semibold leading-5 md:text-lg">
+                <h2 className="catalog-card-title break-words text-sm font-semibold leading-5 md:text-lg">
                   {product.name}
                 </h2>
                 <p className="catalog-card-profile mt-1 text-xs text-neutral-500 md:text-sm">
-                  {product.coffeeProfileName || product.sku}
+                  {product.coffeeProfileName || "향미와 원산지는 상세에서 확인해 보세요."}
                 </p>
                 <p className="catalog-card-variant mt-1 text-xs text-neutral-500 md:text-sm">
                   {getRoastLevelLabel(product.roastLevel)} · {product.weightGrams}g
