@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -11,6 +12,11 @@ type AdminProductEditPageProps = {
   params: Promise<{
     productId: string
   }>
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ productId: string }> }): Promise<Metadata> {
+  const { productId } = await params
+  return { title: /^[1-9]\d*$/.test(productId) ? `상품 수정 · 관리자 #${productId}` : "상품 수정 · 관리자" }
 }
 
 export default async function AdminProductEditPage({

@@ -1,7 +1,10 @@
+import type { Metadata } from "next"
 import { getProcessingMethods, type CoffeeReference } from "@/lib/api/coffee"
 import { ApiError } from "@/lib/api/types"
 
 import { RecommendationsView } from "./recommendations-view"
+
+export const metadata: Metadata = { title: "취향 추천" }
 
 export default async function RecommendationsPage() {
   const references = await loadProcessingMethods()

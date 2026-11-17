@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -28,7 +29,8 @@ import {
   type ProductDetail,
   type RoastLevel,
 } from "@/lib/api/catalog"
-import { ApiError } from "@/lib/api/types"
+import { useFormErrorFocus, getNumberInputErrors } from "@/lib/form-feedback"
+import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 import {
   getProductImageUrlError,
   isApprovedProductImageUrl,
@@ -82,7 +84,9 @@ const textareaClassName =
 const fieldErrorClassName = "mt-1.5 text-xs font-medium text-red-600"
 
 export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
+  const focusFormError = useFormErrorFocus()
   const router = useRouter()
+  const sectionRef = useRef<HTMLElement>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [coffeeProfiles, setCoffeeProfiles] = useState<CoffeeProfile[]>([])
   const [form, setForm] = useState<ProductFormState>(initialFormState)
@@ -164,18 +168,23 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const nextErrors = validateProductForm(form)
+    const nextErrors = {
+      ...getNumberInputErrors(event.currentTarget),
+      ...validateProductForm(form),
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       setMessageTone("error")
       setMessage("상품 입력값을 다시 확인해 주세요.")
+      focusFormError(sectionRef.current)
       return
     }
 
     const payload = toProductRequest(form)
 
     setIsSubmitting(true)
+    setErrors({})
     setMessage(null)
 
     try {
@@ -188,6 +197,11 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
         router.replace("/admin/products")
       }
     } catch (error) {
+      if (error instanceof ApiError) {
+        const fields = validationErrorsToFieldMap(error.errors)
+        setErrors({ ...fields, image_url: fields.image_url ?? fields.imageUrl })
+      }
+      focusFormError(sectionRef.current)
       setMessageTone("error")
       setMessage(getAdminErrorMessage(error))
     } finally {
@@ -202,7 +216,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
   }
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section ref={sectionRef} className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-2">
         <PackagePlus className="size-5 text-neutral-500" />
         <h2 className="text-lg font-bold">{title}</h2>
@@ -215,6 +229,8 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
               ? "mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
               : "mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
           }
+          tabIndex={-1}
+          data-form-error={messageTone === "error" ? true : undefined}
           role={messageTone === "error" ? "alert" : "status"}
         >
           {message}
@@ -226,10 +242,13 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
           상품 입력 정보를 불러오고 있습니다.
         </p>
       ) : (
-        <form className="mt-5 grid gap-5 md:grid-cols-2" onSubmit={handleSubmit}>
-          <Field label="카테고리" error={errors.categoryId}>
+        <form noValidate aria-label={title} className="mt-5 grid gap-5 md:grid-cols-2" onSubmit={handleSubmit}>
+          <Field name="categoryId" label="카테고리" error={errors.categoryId}>
             <select
+              id="product-categoryId"
               name="categoryId"
+              required
+              aria-describedby={errors.categoryId ? "product-categoryId-error" : undefined}
               value={form.categoryId}
               disabled={isSubmitting}
               className={inputClassName}
@@ -245,9 +264,12 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
             </select>
           </Field>
 
-          <Field label="로스팅" error={errors.roastLevel}>
+          <Field name="roastLevel" label="로스팅" error={errors.roastLevel}>
             <select
+              id="product-roastLevel"
               name="roastLevel"
+              required
+              aria-describedby={errors.roastLevel ? "product-roastLevel-error" : undefined}
               value={form.roastLevel}
               disabled={isSubmitting}
               className={inputClassName}
@@ -262,9 +284,11 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
             </select>
           </Field>
 
-          <Field label="커피 프로필" error={errors.coffeeProfileId}>
+          <Field name="coffeeProfileId" label="커피 프로필" error={errors.coffeeProfileId}>
             <select
+              id="product-coffeeProfileId"
               name="coffeeProfileId"
+              aria-describedby={errors.coffeeProfileId ? "product-coffeeProfileId-error" : undefined}
               value={form.coffeeProfileId}
               disabled={isSubmitting}
               className={inputClassName}
@@ -346,12 +370,15 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
           />
 
           <Field
+            name="description"
             label="상품 설명"
             error={errors.description}
             className="md:col-span-2"
           >
             <textarea
+              id="product-description"
               name="description"
+              aria-describedby={errors.description ? "product-description-error" : undefined}
               value={form.description}
               disabled={isSubmitting}
               className={textareaClassName}
@@ -392,22 +419,24 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
 }
 
 function Field({
+  name,
   label,
   error,
   className,
   children,
 }: {
+  name: keyof ProductFormState
   label: string
   error?: string
   className?: string
   children: ReactNode
 }) {
   return (
-    <label className={className ? `block ${className}` : "block"}>
-      <span className="mb-2 block text-sm font-semibold">{label}</span>
+    <div className={className ? `block ${className}` : "block"}>
+      <label htmlFor={`product-${name}`} className="mb-2 block text-sm font-semibold">{label}</label>
       {children}
-      {error && <span className={fieldErrorClassName}>{error}</span>}
-    </label>
+      {error && <p id={`product-${name}-error`} className={fieldErrorClassName}>{error}</p>}
+    </div>
   )
 }
 
@@ -439,9 +468,12 @@ function TextField({
   ) => void
 }) {
   return (
-    <Field label={label} error={error}>
+    <Field name={name} label={label} error={error}>
       <input
+        id={`product-${name}`}
         name={name}
+        required={["sku", "weightGrams", "name", "price"].includes(name)}
+        aria-describedby={[description ? `product-${name}-hint` : "", error ? `product-${name}-error` : ""].filter(Boolean).join(" ") || undefined}
         // Let the shared URL policy normalize whitespace before validation.
         type={type === "url" ? "text" : type}
         inputMode={type === "url" ? "url" : undefined}
@@ -454,8 +486,8 @@ function TextField({
         aria-invalid={Boolean(error)}
         onChange={onChange}
       />
-      {description && !error && (
-        <span className="mt-1.5 block text-xs leading-5 text-neutral-500">
+      {description && (
+        <span id={`product-${name}-hint`} className="mt-1.5 block text-xs leading-5 text-neutral-500">
           {description}
         </span>
       )}

@@ -1,5 +1,8 @@
+import type { Metadata } from "next"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+
+export const metadata: Metadata = { title: "개인정보처리방침" }
 
 export default function PrivacyPage() {
   return (

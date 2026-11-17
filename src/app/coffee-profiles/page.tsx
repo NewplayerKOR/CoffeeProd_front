@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react"
 
@@ -18,6 +19,8 @@ import { getBeanTypeLabel, getRoastLevelLabel } from "@/lib/coffee-display"
 type CoffeeProfilesPageProps = {
   searchParams: Promise<{ page?: string | string[] }>
 }
+
+export const metadata: Metadata = { title: "커피 프로필 목록" }
 
 export default async function CoffeeProfilesPage({
   searchParams,

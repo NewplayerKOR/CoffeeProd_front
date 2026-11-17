@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -10,6 +11,8 @@ type LoginPageProps = {
     redirect?: string
   }>
 }
+
+export const metadata: Metadata = { title: "로그인" }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { signup, redirect } = await searchParams

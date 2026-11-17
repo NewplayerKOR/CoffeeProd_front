@@ -1,9 +1,12 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { UserPlus } from "lucide-react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { SignupForm } from "./signup-form"
+
+export const metadata: Metadata = { title: "회원가입" }
 
 export default function SignupPage() {
   return (

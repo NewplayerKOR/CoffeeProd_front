@@ -2471,3 +2471,48 @@ dialog::backdrop {
 .app-modal-dialog::backdrop {
   background: rgb(0 0 0 / 50%);
 }
+
+.sales-table-scroll[tabindex]:focus-visible {
+  outline-offset: -3px;
+}
+
+/* 선택과 키보드 초점은 색상 없이도 구분한다. */
+.catalog-tab[aria-selected="true"],
+.catalog-page-number[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+.about-section-nav button:hover .about-section-dot {
+  outline: 1px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (forced-colors: active) {
+  :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: Highlight !important;
+  }
+
+  [data-slot="button"]:disabled {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+
+  [data-slot="button"]:not(:disabled):hover {
+    border-color: Highlight;
+  }
+
+  .about-section-label {
+    color: CanvasText;
+  }
+
+  .about-section-dot {
+    border: 1px solid CanvasText;
+  }
+
+  .about-section-dot.is-active {
+    border-width: 3px;
+  }
+}

@@ -416,7 +416,7 @@ export function AboutExperience() {
           <button
             key={section.id}
             type="button"
-            className="group flex items-center justify-end gap-2"
+            className="group flex min-h-11 min-w-11 items-center justify-end gap-2 rounded px-2 motion-safe:active:translate-y-px"
             onClick={() => scrollToSection(section.id)}
             aria-label={`${section.label} 섹션으로 이동`}
             aria-current={activeSection === section.id ? "location" : undefined}

@@ -322,7 +322,7 @@ export function OrdersAdminView() {
                         </option>
                       )}
                     </select>
-                    <Button type="submit" disabled={!canChange || isPending}>
+                    <Button type="submit" disabled={!canChange || isPending} aria-label={`주문 ${order.orderId} 상태 변경${isPending ? " 중" : ""}`} aria-busy={isPending}>
                       <PackageCheck data-icon="inline-start" />
                       {isPending ? "변경 중" : "상태 변경"}
                     </Button>

@@ -3,6 +3,8 @@
 import { Check, Plus, Trash2, X } from "lucide-react"
 import { type FormEvent, type ReactNode, useState } from "react"
 
+import { useFormErrorFocus, getNumberInputErrors } from "@/lib/form-feedback"
+import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import type {
   BeanType,
@@ -87,9 +89,11 @@ export function CoffeeProfileAdminForm({
   onSave: (payload: CoffeeProfileRequest) => Promise<void>
   onCancel: () => void
 }) {
+  const focusFormError = useFormErrorFocus()
   const [form, setForm] = useState<ProfileFormState>(() =>
     profile ? toFormState(profile) : emptyForm
   )
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -98,15 +102,21 @@ export function CoffeeProfileAdminForm({
     value: ProfileFormState[Key]
   ) {
     setForm((current) => ({ ...current, [field]: value }))
+    setErrors((current) => Object.fromEntries(Object.entries(current).filter(([name]) => name !== field && !name.startsWith(`${field}[`))))
     setMessage(null)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const validationMessage = validateProfileForm(form)
-
-    if (validationMessage) {
-      setMessage(validationMessage)
+    const formElement = event.currentTarget
+    const nextErrors = {
+      ...getNumberInputErrors(event.currentTarget),
+      ...validateProfileForm(form),
+    }
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length) {
+      setMessage(null)
+      focusFormError(formElement)
       return
     }
 
@@ -116,6 +126,8 @@ export function CoffeeProfileAdminForm({
     try {
       await onSave(toRequest(form))
     } catch (error) {
+      if (error instanceof ApiError) setErrors(validationErrorsToFieldMap(error.errors))
+      focusFormError(formElement)
       setMessage(error instanceof Error ? error.message : "프로필 저장에 실패했습니다.")
     } finally {
       setIsSubmitting(false)
@@ -166,6 +178,8 @@ export function CoffeeProfileAdminForm({
   return (
     <form
       className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
+      noValidate
+      aria-label={profile ? "커피 프로필 수정" : "커피 프로필 등록"}
       onSubmit={handleSubmit}
     >
       <div className="flex items-start justify-between gap-4">
@@ -184,19 +198,24 @@ export function CoffeeProfileAdminForm({
       </div>
 
       {message && (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">
+        <p data-form-error tabIndex={-1} className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">
           {message}
         </p>
       )}
 
       <section className="mt-6 grid gap-4 md:grid-cols-2">
         <TextField
+          name="profileName"
+          error={errors.profileName}
+          required
           label="프로필명"
           value={form.profileName}
           disabled={isSubmitting}
           onChange={(value) => updateField("profileName", value)}
         />
         <SelectField
+          name="beanType"
+          error={errors.beanType}
           label="원두 구성"
           value={form.beanType}
           disabled={isSubmitting}
@@ -208,6 +227,8 @@ export function CoffeeProfileAdminForm({
           <option value="BLEND">블렌드</option>
         </SelectField>
         <SelectField
+          name="processingMethodId"
+          error={errors.processingMethodId}
           label="대표 가공 방식"
           value={form.processingMethodId}
           disabled={isSubmitting}
@@ -221,6 +242,8 @@ export function CoffeeProfileAdminForm({
           ))}
         </SelectField>
         <SelectField
+          name="roastLevel"
+          error={errors.roastLevel}
           label="로스팅"
           value={form.roastLevel}
           disabled={isSubmitting}
@@ -237,6 +260,9 @@ export function CoffeeProfileAdminForm({
       {form.beanType === "SINGLE_ORIGIN" ? (
         <section className="mt-6 grid gap-4 border-t border-neutral-200 pt-6 md:grid-cols-2">
           <TextField
+            name="originCountryCode"
+            error={errors.originCountryCode}
+            required
             label="원산지 국가 코드"
             value={form.originCountryCode}
             maxLength={2}
@@ -247,24 +273,32 @@ export function CoffeeProfileAdminForm({
             }
           />
           <TextField
+            name="originRegion"
+            error={errors.originRegion}
             label="원산지 지역"
             value={form.originRegion}
             disabled={isSubmitting}
             onChange={(value) => updateField("originRegion", value)}
           />
           <TextField
+            name="farmOrCooperative"
+            error={errors.farmOrCooperative}
             label="농장 또는 조합"
             value={form.farmOrCooperative}
             disabled={isSubmitting}
             onChange={(value) => updateField("farmOrCooperative", value)}
           />
           <TextField
+            name="producer"
+            error={errors.producer}
             label="생산자"
             value={form.producer}
             disabled={isSubmitting}
             onChange={(value) => updateField("producer", value)}
           />
           <TextField
+            name="altitudeMin"
+            error={errors.altitudeMin}
             label="최저 고도(m)"
             value={form.altitudeMin}
             type="number"
@@ -273,6 +307,8 @@ export function CoffeeProfileAdminForm({
             onChange={(value) => updateField("altitudeMin", value)}
           />
           <TextField
+            name="altitudeMax"
+            error={errors.altitudeMax}
             label="최고 고도(m)"
             value={form.altitudeMax}
             type="number"
@@ -286,6 +322,7 @@ export function CoffeeProfileAdminForm({
           components={form.components}
           processingMethods={processingMethods}
           disabled={isSubmitting}
+          errors={errors}
           onChange={(components) => updateField("components", components)}
         />
       )}
@@ -294,6 +331,7 @@ export function CoffeeProfileAdminForm({
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input
+              {...profileFieldProps("decaf", errors)}
               type="checkbox"
               checked={form.decaf}
               disabled={isSubmitting}
@@ -302,17 +340,23 @@ export function CoffeeProfileAdminForm({
             />
             디카페인 프로필
           </label>
+          <ProfileFieldError name="decaf" error={errors.decaf} />
           {form.decaf && (
-            <input
-              value={form.decafMethod}
-              maxLength={50}
-              disabled={isSubmitting}
-              className={`${inputClassName} max-w-xs`}
-              placeholder="디카페인 방식"
-              onChange={(event) =>
-                updateField("decafMethod", event.currentTarget.value)
-              }
-            />
+            <div className="w-full max-w-xs">
+              <label htmlFor="profile-decafMethod" className="mb-2 block text-sm font-semibold">
+                디카페인 방식
+              </label>
+              <input
+                {...profileFieldProps("decafMethod", errors)}
+                value={form.decafMethod}
+                maxLength={50}
+                disabled={isSubmitting}
+                className={`${inputClassName} max-w-xs`}
+                placeholder="디카페인 방식"
+                onChange={(event) => updateField("decafMethod", event.currentTarget.value)}
+              />
+              <ProfileFieldError name="decafMethod" error={errors.decafMethod} />
+            </div>
           )}
         </div>
       </section>
@@ -330,6 +374,8 @@ export function CoffeeProfileAdminForm({
           ).map(([field, label]) => (
             <SelectField
               key={field}
+              name={field}
+              error={errors[field]}
               label={label}
               value={form[field]}
               disabled={isSubmitting}
@@ -346,6 +392,8 @@ export function CoffeeProfileAdminForm({
       </section>
 
       <ReferenceSelection
+        name="flavorNotes"
+        errors={errors}
         title="향미 노트"
         description="최대 5개"
         references={flavorNotes}
@@ -359,32 +407,51 @@ export function CoffeeProfileAdminForm({
           )
 
           return selected ? (
-            <select
-              value={selected.intensity}
-              disabled={isSubmitting}
-              className={`${inputClassName} mt-2`}
-              onChange={(event) =>
-                updateField(
-                  "flavorNotes",
-                  form.flavorNotes.map((item) =>
-                    item.flavorNoteId === reference.id
-                      ? { ...item, intensity: event.currentTarget.value }
-                      : item
+            <div>
+              <label
+                htmlFor={`profile-flavor-${reference.id}-intensity`}
+                className="mt-2 block text-xs font-semibold"
+              >
+                {reference.name} 강도
+              </label>
+              <select
+                {...profileFieldProps(
+                  `flavorNotes[${form.flavorNotes.indexOf(selected)}].intensity`,
+                  errors
+                )}
+                id={`profile-flavor-${reference.id}-intensity`}
+                value={selected.intensity}
+                disabled={isSubmitting}
+                className={`${inputClassName} mt-2`}
+                onChange={(event) =>
+                  updateField(
+                    "flavorNotes",
+                    form.flavorNotes.map((item) =>
+                      item.flavorNoteId === reference.id
+                        ? { ...item, intensity: event.currentTarget.value }
+                        : item
+                    )
                   )
-                )
-              }
-            >
-              {[1, 2, 3, 4, 5].map((score) => (
-                <option key={score} value={String(score)}>
-                  강도 {score}
-                </option>
-              ))}
-            </select>
+                }
+              >
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <option key={score} value={String(score)}>
+                    강도 {score}
+                  </option>
+                ))}
+              </select>
+              <ProfileFieldError
+                name={`flavorNotes[${form.flavorNotes.indexOf(selected)}].intensity`}
+                error={errors[`flavorNotes[${form.flavorNotes.indexOf(selected)}].intensity`]}
+              />
+            </div>
           ) : null
         }}
       />
 
       <ReferenceSelection
+        name="brewMethods"
+        errors={errors}
         title="추천 추출법"
         description="최대 3개"
         references={brewMethods}
@@ -398,28 +465,49 @@ export function CoffeeProfileAdminForm({
           )
 
           return selected ? (
-            <input
-              value={selected.recommendationNote}
-              maxLength={500}
-              disabled={isSubmitting}
-              className={`${inputClassName} mt-2`}
-              placeholder="추출 안내"
-              onChange={(event) =>
-                updateField(
-                  "brewMethods",
-                  form.brewMethods.map((item) =>
-                    item.brewMethodId === reference.id
-                      ? { ...item, recommendationNote: event.currentTarget.value }
-                      : item
+            <div>
+              <label
+                htmlFor={`profile-brew-${reference.id}-note`}
+                className="mt-2 block text-xs font-semibold"
+              >
+                {reference.name} 추출 안내
+              </label>
+              <input
+                {...profileFieldProps(
+                  `brewMethods[${form.brewMethods.indexOf(selected)}].recommendationNote`,
+                  errors
+                )}
+                id={`profile-brew-${reference.id}-note`}
+                value={selected.recommendationNote}
+                maxLength={500}
+                disabled={isSubmitting}
+                className={`${inputClassName} mt-2`}
+                placeholder="추출 안내"
+                onChange={(event) =>
+                  updateField(
+                    "brewMethods",
+                    form.brewMethods.map((item) =>
+                      item.brewMethodId === reference.id
+                        ? { ...item, recommendationNote: event.currentTarget.value }
+                        : item
+                    )
                   )
-                )
-              }
-            />
+                }
+              />
+              <ProfileFieldError
+                name={`brewMethods[${form.brewMethods.indexOf(selected)}].recommendationNote`}
+                error={
+                  errors[`brewMethods[${form.brewMethods.indexOf(selected)}].recommendationNote`]
+                }
+              />
+            </div>
           ) : null
         }}
       />
 
       <ReferenceSelection
+        name="varieties"
+        errors={errors}
         title="커피 품종"
         description="최대 3개"
         references={varieties}
@@ -429,15 +517,17 @@ export function CoffeeProfileAdminForm({
         onToggle={toggleVariety}
       />
 
-      <label className="mt-6 block border-t border-neutral-200 pt-6">
-        <span className="mb-2 block text-sm font-semibold">프로필 요약</span>
+      <div className="mt-6 block border-t border-neutral-200 pt-6">
+        <label htmlFor="profile-summary" className="mb-2 block text-sm font-semibold">프로필 요약</label>
         <textarea
+          {...profileFieldProps("summary", errors)}
           value={form.summary}
           disabled={isSubmitting}
           className={textareaClassName}
           onChange={(event) => updateField("summary", event.currentTarget.value)}
         />
-      </label>
+        <ProfileFieldError name="summary" error={errors.summary} />
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
         <Button type="submit" disabled={isSubmitting}>
@@ -456,8 +546,10 @@ function BlendComponents({
   components,
   processingMethods,
   disabled,
+  errors,
   onChange,
 }: {
+  errors: Record<string, string>
   components: ProfileFormState["components"]
   processingMethods: CoffeeReference[]
   disabled: boolean
@@ -480,11 +572,12 @@ function BlendComponents({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-sm font-bold">블렌드 구성요소</h3>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p id="profile-components-hint" className="mt-1 text-xs text-neutral-500">
             2~5개 구성, 비율 입력 시 합계 100
           </p>
         </div>
         <Button
+          {...profileFieldProps("components", errors, "profile-components-hint")}
           type="button"
           variant="outline"
           size="sm"
@@ -505,67 +598,112 @@ function BlendComponents({
         </Button>
       </div>
 
+      <ProfileFieldError name="components" error={errors.components} />
       <div className="mt-4 space-y-3">
         {components.map((component, index) => (
           <div
             key={index}
             className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 md:grid-cols-[120px_1fr_1fr_120px_auto]"
           >
-            <input
-              value={component.originCountryCode}
-              maxLength={2}
-              disabled={disabled}
-              className={inputClassName}
-              placeholder="국가 코드"
-              onChange={(event) =>
-                updateComponent(
-                  index,
-                  "originCountryCode",
-                  event.currentTarget.value.toUpperCase()
-                )
-              }
-            />
-            <input
-              value={component.originRegion}
-              disabled={disabled}
-              className={inputClassName}
-              placeholder="지역"
-              onChange={(event) =>
-                updateComponent(index, "originRegion", event.currentTarget.value)
-              }
-            />
-            <select
-              value={component.processingMethodId}
-              disabled={disabled}
-              className={inputClassName}
-              onChange={(event) =>
-                updateComponent(
-                  index,
-                  "processingMethodId",
-                  event.currentTarget.value
-                )
-              }
-            >
-              <option value="">가공 방식 미지정</option>
-              {processingMethods.map((method) => (
-                <option key={method.id} value={String(method.id)}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min={0.01}
-              max={100}
-              step={0.01}
-              value={component.componentRatio}
-              disabled={disabled}
-              className={inputClassName}
-              placeholder="비율 %"
-              onChange={(event) =>
-                updateComponent(index, "componentRatio", event.currentTarget.value)
-              }
-            />
+            <div>
+              <label
+                htmlFor={`profile-components[${index}].originCountryCode`}
+                className="mb-2 block text-xs font-semibold"
+              >
+                구성 {index + 1} 국가 코드
+              </label>
+              <input
+                {...profileFieldProps(`components[${index}].originCountryCode`, errors)}
+                value={component.originCountryCode}
+                maxLength={2}
+                disabled={disabled}
+                className={inputClassName}
+                placeholder="국가 코드"
+                onChange={(event) =>
+                  updateComponent(index, "originCountryCode", event.currentTarget.value.toUpperCase())
+                }
+              />
+              <ProfileFieldError
+                name={`components[${index}].originCountryCode`}
+                error={errors[`components[${index}].originCountryCode`]}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={`profile-components[${index}].originRegion`}
+                className="mb-2 block text-xs font-semibold"
+              >
+                구성 {index + 1} 지역
+              </label>
+              <input
+                {...profileFieldProps(`components[${index}].originRegion`, errors)}
+                value={component.originRegion}
+                disabled={disabled}
+                className={inputClassName}
+                placeholder="지역"
+                onChange={(event) =>
+                  updateComponent(index, "originRegion", event.currentTarget.value)
+                }
+              />
+              <ProfileFieldError
+                name={`components[${index}].originRegion`}
+                error={errors[`components[${index}].originRegion`]}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={`profile-components[${index}].processingMethodId`}
+                className="mb-2 block text-xs font-semibold"
+              >
+                구성 {index + 1} 가공 방식
+              </label>
+              <select
+                {...profileFieldProps(`components[${index}].processingMethodId`, errors)}
+                value={component.processingMethodId}
+                disabled={disabled}
+                className={inputClassName}
+                onChange={(event) =>
+                  updateComponent(index, "processingMethodId", event.currentTarget.value)
+                }
+              >
+                <option value="">가공 방식 미지정</option>
+                {processingMethods.map((method) => (
+                  <option key={method.id} value={String(method.id)}>
+                    {method.name}
+                  </option>
+                ))}
+              </select>
+              <ProfileFieldError
+                name={`components[${index}].processingMethodId`}
+                error={errors[`components[${index}].processingMethodId`]}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={`profile-components[${index}].componentRatio`}
+                className="mb-2 block text-xs font-semibold"
+              >
+                구성 {index + 1} 비율 %
+              </label>
+              <input
+                {...profileFieldProps(`components[${index}].componentRatio`, errors, "profile-components-hint")}
+                type="number"
+                min={0.01}
+                max={100}
+                step={0.01}
+                value={component.componentRatio}
+                disabled={disabled}
+                className={inputClassName}
+                placeholder="비율 %"
+                onChange={(event) =>
+                  updateComponent(index, "componentRatio", event.currentTarget.value)
+                }
+              />
+              <ProfileFieldError
+                name={`components[${index}].componentRatio`}
+                error={errors[`components[${index}].componentRatio`]}
+              />
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -586,6 +724,8 @@ function BlendComponents({
 }
 
 function ReferenceSelection({
+  name,
+  errors,
   title,
   description,
   references,
@@ -595,6 +735,8 @@ function ReferenceSelection({
   onToggle,
   renderExtra,
 }: {
+  name: "flavorNotes" | "brewMethods" | "varieties"
+  errors: Record<string, string>
   title: string
   description: string
   references: CoffeeReference[]
@@ -605,14 +747,25 @@ function ReferenceSelection({
   renderExtra?: (reference: CoffeeReference) => ReactNode
 }) {
   return (
-    <section className="mt-6 border-t border-neutral-200 pt-6">
+    <section
+      id={`profile-${name}`}
+      role="group"
+      tabIndex={-1}
+      aria-labelledby={`profile-${name}-title`}
+      data-invalid={Boolean(errors[name])}
+      aria-describedby={[`profile-${name}-hint`, errors[name] ? `profile-${name}-error` : undefined].filter(Boolean).join(" ")}
+      className="mt-6 border-t border-neutral-200 pt-6"
+    >
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-bold">{title}</h3>
-        <span className="text-xs text-neutral-500">{description}</span>
+        <h3 id={`profile-${name}-title`} className="text-sm font-bold">{title}</h3>
+        <span id={`profile-${name}-hint`} className="text-xs text-neutral-500">{description}</span>
       </div>
+      <ProfileFieldError name={name} error={errors[name]} />
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {references.map((reference) => {
           const selected = selectedIds.includes(reference.id)
+          const idField = name === "flavorNotes" ? "flavorNoteId" : name === "brewMethods" ? "brewMethodId" : "coffeeVarietyId"
+          const field = selected ? `${name}[${selectedIds.indexOf(reference.id)}].${idField}` : `${name}-option-${reference.id}`
           const blocked = !selected && selectedIds.length >= limit
 
           return (
@@ -620,8 +773,10 @@ function ReferenceSelection({
               key={reference.id}
               className="rounded-lg border border-neutral-200 bg-neutral-50 p-3"
             >
-              <label className="flex items-start gap-2 text-sm">
+              <label htmlFor={`profile-${name}-option-${reference.id}`} className="flex items-start gap-2 text-sm">
                 <input
+                  {...profileFieldProps(field, errors, `profile-${name}-hint`)}
+                  id={`profile-${name}-option-${reference.id}`}
                   type="checkbox"
                   checked={selected}
                   disabled={disabled || blocked}
@@ -635,6 +790,7 @@ function ReferenceSelection({
                   </span>
                 </span>
               </label>
+              <ProfileFieldError name={field} error={errors[field]} />
               {renderExtra?.(reference)}
             </div>
           )
@@ -645,6 +801,9 @@ function ReferenceSelection({
 }
 
 function TextField({
+  name,
+  error,
+  required = false,
   label,
   value,
   disabled,
@@ -654,6 +813,9 @@ function TextField({
   maxLength,
   onChange,
 }: {
+  name: string
+  error?: string
+  required?: boolean
   label: string
   value: string
   disabled: boolean
@@ -664,9 +826,11 @@ function TextField({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold">{label}</span>
+    <div className="block">
+      <label htmlFor={`profile-${name}`} className="mb-2 block text-sm font-semibold">{label}</label>
       <input
+        {...profileFieldProps(name, { [name]: error })}
+        required={required}
         type={type}
         min={min}
         maxLength={maxLength}
@@ -676,17 +840,24 @@ function TextField({
         placeholder={placeholder}
         onChange={(event) => onChange(event.currentTarget.value)}
       />
-    </label>
+      <ProfileFieldError name={name} error={error} />
+    </div>
   )
 }
 
 function SelectField({
+  name,
+  error,
+  required = false,
   label,
   value,
   disabled,
   children,
   onChange,
 }: {
+  name: string
+  error?: string
+  required?: boolean
   label: string
   value: string
   disabled: boolean
@@ -694,9 +865,11 @@ function SelectField({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold">{label}</span>
+    <div className="block">
+      <label htmlFor={`profile-${name}`} className="mb-2 block text-sm font-semibold">{label}</label>
       <select
+        {...profileFieldProps(name, { [name]: error })}
+        required={required}
         value={value}
         disabled={disabled}
         className={inputClassName}
@@ -704,41 +877,60 @@ function SelectField({
       >
         {children}
       </select>
-    </label>
+      <ProfileFieldError name={name} error={error} />
+    </div>
   )
 }
 
-function validateProfileForm(form: ProfileFormState) {
-  if (!form.profileName.trim()) {
-    return "프로필명을 입력해 주세요."
+function profileFieldProps(
+  name: string,
+  errors: Record<string, string | undefined>,
+  hintId?: string
+) {
+  return {
+    id: `profile-${name}`,
+    name,
+    "aria-invalid": Boolean(errors[name]),
+    "aria-describedby": [hintId, errors[name] ? `profile-${name}-error` : undefined].filter(Boolean).join(" ") || undefined,
   }
+}
 
+function ProfileFieldError({ name, error }: { name: string; error?: string }) {
+  return error ? (
+    <p id={`profile-${name}-error`} className="mt-2 text-xs font-medium text-red-600">
+      {error}
+    </p>
+  ) : null
+}
+
+function validateProfileForm(form: ProfileFormState) {
+  const errors: Record<string, string> = {}
+  if (!form.profileName.trim()) errors.profileName = "프로필명을 입력해 주세요."
   if (form.beanType === "SINGLE_ORIGIN") {
-    if (!/^[A-Z]{2}$/.test(form.originCountryCode)) {
-      return "싱글 오리진 국가 코드는 영문 대문자 2자리여야 합니다."
-    }
-  } else {
-    if (form.components.length < 2 || form.components.length > 5) {
-      return "블렌드는 2~5개 구성요소가 필요합니다."
-    }
-
-    if (
-      form.components.some(
-        (component) => !/^[A-Z]{2}$/.test(component.originCountryCode)
+    if (!/^[A-Z]{2}$/.test(form.originCountryCode))
+      errors.originCountryCode = "싱글 오리진 국가 코드는 영문 대문자 2자리여야 합니다."
+    for (const name of ["altitudeMin", "altitudeMax"] as const) {
+      if (
+        form[name] !== "" &&
+        (!Number.isInteger(Number(form[name])) || Number(form[name]) < 0)
       )
-    ) {
-      return "모든 블렌드 구성요소에 국가 코드 2자리를 입력해 주세요."
+        errors[name] = "고도는 0 이상의 정수로 입력해 주세요."
     }
-
+    if (
+      form.altitudeMin !== "" &&
+      form.altitudeMax !== "" &&
+      Number(form.altitudeMin) > Number(form.altitudeMax)
+    )
+      errors.altitudeMin = "최저 고도는 최고 고도보다 클 수 없습니다."
+  } else {
+    if (form.components.length < 2 || form.components.length > 5)
+      errors.components = "블렌드는 2~5개 구성요소가 필요합니다."
     const enteredRatios = form.components.filter(
       (component) => component.componentRatio !== ""
     )
-
-    if (enteredRatios.length > 0 && enteredRatios.length !== form.components.length) {
-      return "블렌드 비율은 모두 입력하거나 모두 비워야 합니다."
-    }
-
-    if (
+    const incomplete =
+      enteredRatios.length > 0 && enteredRatios.length !== form.components.length
+    const totalInvalid =
       enteredRatios.length > 0 &&
       Math.abs(
         enteredRatios.reduce(
@@ -746,23 +938,29 @@ function validateProfileForm(form: ProfileFormState) {
           0
         ) - 100
       ) > 0.001
-    ) {
-      return "블렌드 구성 비율의 합계는 100이어야 합니다."
-    }
+    form.components.forEach((component, index) => {
+      if (!/^[A-Z]{2}$/.test(component.originCountryCode))
+        errors[`components[${index}].originCountryCode`] =
+          "국가 코드는 영문 대문자 2자리로 입력해 주세요."
+      const ratio = Number(component.componentRatio)
+      if (
+        component.componentRatio !== "" &&
+        (!Number.isFinite(ratio) ||
+          ratio < 0.01 ||
+          ratio > 100 ||
+          Math.abs(ratio * 100 - Math.round(ratio * 100)) > 0.000001)
+      )
+        errors[`components[${index}].componentRatio`] =
+          "비율은 0.01~100 사이에서 소수점 둘째 자리까지 입력해 주세요."
+      else if (incomplete)
+        errors[`components[${index}].componentRatio`] =
+          "블렌드 비율은 모두 입력하거나 모두 비워야 합니다."
+      else if (totalInvalid)
+        errors[`components[${index}].componentRatio`] =
+          "블렌드 구성 비율의 합계는 100이어야 합니다."
+    })
   }
-
-  const altitudeMin = numberOrNull(form.altitudeMin)
-  const altitudeMax = numberOrNull(form.altitudeMax)
-
-  if (
-    altitudeMin !== null &&
-    altitudeMax !== null &&
-    altitudeMin > altitudeMax
-  ) {
-    return "최저 고도는 최고 고도보다 클 수 없습니다."
-  }
-
-  return null
+  return errors
 }
 
 function toRequest(form: ProfileFormState): CoffeeProfileRequest {

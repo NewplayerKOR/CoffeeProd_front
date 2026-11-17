@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowDown, ArrowRight } from "lucide-react"
@@ -13,6 +14,8 @@ import { HomeSlider, type HomeSlide } from "./home-slider"
 import { HomeTasteFinder } from "./home-taste-finder"
 import { PortfolioNotice } from "./portfolio-notice"
 import { ProductImage } from "./products/product-image"
+
+export const metadata: Metadata = { title: "홈 | CoffeeProd" }
 
 export default async function Home() {
   const featuredProducts = await loadFeaturedProducts()

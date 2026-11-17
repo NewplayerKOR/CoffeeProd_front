@@ -1,7 +1,10 @@
+import type { Metadata } from "next"
 import { getProcessingMethods, type CoffeeReference } from "@/lib/api/coffee"
 import { ApiError } from "@/lib/api/types"
 
 import { CoffeePreferenceView } from "./coffee-preference-view"
+
+export const metadata: Metadata = { title: "내 커피 취향" }
 
 export default async function CoffeePreferencePage() {
   const references = await loadProcessingMethods()

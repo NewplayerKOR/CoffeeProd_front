@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -48,8 +49,10 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null)
   const [cartStatus, setCartStatus] = useState<CartStatus>("idle")
   const [cartError, setCartError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
 
   const resetSession = useCallback(() => {
+    requestVersion.current += 1
     setStatus("guest")
     setMember(null)
     setCart(null)
@@ -63,6 +66,7 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const version = ++requestVersion.current
     setStatus("checking")
     setCartStatus("checking")
     setCartError(null)
@@ -71,6 +75,7 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
       getMe(),
       getCart(),
     ])
+    if (version !== requestVersion.current) return
 
     if (memberResult.status === "rejected") {
       if (memberResult.reason instanceof ApiError && memberResult.reason.kind === "UNAUTHORIZED") {
@@ -134,6 +139,7 @@ export function SessionStateProvider({ children }: { children: ReactNode }) {
     window.addEventListener(CART_CHANGED_EVENT, handleCartChanged)
 
     return () => {
+      requestVersion.current += 1
       window.clearTimeout(initialSyncId)
       window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
       window.removeEventListener(

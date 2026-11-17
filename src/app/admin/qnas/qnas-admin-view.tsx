@@ -2,75 +2,34 @@
 
 import Link from "next/link"
 import { MessageCircle, RefreshCw, Send } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { type ReactNode, useCallback, useState } from "react"
 
+import { LoadError } from "@/components/load-error"
+import { useRemoteQuery } from "@/lib/use-remote-query"
 import { Button } from "@/components/ui/button"
 import {
   answerAdminQna,
   getAdminQnas,
-  type Qna,
   type QnaStatus,
 } from "@/lib/api/qna"
-import { ApiError, type PageResponse } from "@/lib/api/types"
+import { ApiError } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 type StatusFilter = QnaStatus | "ALL"
 
 export function QnasAdminView() {
-  const [qnas, setQnas] = useState<PageResponse<Qna> | null>(null)
   const [status, setStatus] = useState<StatusFilter>("WAITING")
   const [page, setPage] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [pendingId, setPendingId] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
 
-  const loadQnas = useCallback(async () => {
-    try {
-      setQnas(
-        await getAdminQnas({
-          status: status === "ALL" ? undefined : status,
-          page,
-          size: 20,
-          sort: "createdAt,desc",
-        })
-      )
-    } catch (error) {
-      setMessage(getQnaErrorMessage(error))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, status])
-
-  useEffect(() => {
-    let isActive = true
-
-    void getAdminQnas({
-      status: status === "ALL" ? undefined : status,
-      page,
-      size: 20,
-      sort: "createdAt,desc",
-    })
-      .then((nextQnas) => {
-        if (isActive) {
-          setQnas(nextQnas)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isActive) {
-          setMessage(getQnaErrorMessage(error))
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [page, status])
+  const query = useRemoteQuery(
+    `admin-qnas:${status}:${page}`,
+    useCallback(() => getAdminQnas({ status: status === "ALL" ? undefined : status, page, size: 20, sort: "createdAt,desc" }), [page, status])
+  )
+  const { data: qnas, error: loadError, isLoading, reload: loadQnas } = query
+  const totalPages = qnas?.totalPages ?? query.previousData?.totalPages ?? 0
 
   async function handleAnswer(qnaId: number) {
     const answer = answers[qnaId]?.trim()
@@ -87,7 +46,7 @@ export function QnasAdminView() {
       await answerAdminQna(qnaId, answer)
       setAnswers((current) => ({ ...current, [qnaId]: "" }))
       setMessage("문의 답변을 등록했습니다.")
-      await loadQnas()
+      loadQnas()
     } catch (error) {
       setMessage(getQnaErrorMessage(error))
     } finally {
@@ -113,9 +72,9 @@ export function QnasAdminView() {
             <option value="ALL">전체</option>
           </select>
         </label>
-        <Button type="button" variant="outline" onClick={() => void loadQnas()}>
+        <Button type="button" variant="outline" disabled={isLoading} onClick={loadQnas}>
           <RefreshCw data-icon="inline-start" />
-          새로고침
+          {isLoading ? "조회 중" : "새로고침"}
         </Button>
       </section>
 
@@ -127,6 +86,8 @@ export function QnasAdminView() {
 
       {isLoading ? (
         <EmptyState>상품 문의를 불러오고 있습니다.</EmptyState>
+      ) : loadError ? (
+        <LoadError title="상품 문의를 불러오지 못했습니다." error={loadError} onRetry={loadQnas} loginHref="/login?redirect=/admin/qnas" />
       ) : qnas?.content.length ? (
         <section className="flex flex-col gap-4">
           {qnas.content.map((qna) => {
@@ -200,13 +161,13 @@ export function QnasAdminView() {
         <EmptyState>조건에 맞는 상품 문의가 없습니다.</EmptyState>
       )}
 
-      {qnas && qnas.totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-center gap-3">
           <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((current) => current - 1)}>
             이전
           </Button>
-          <span className="text-sm text-neutral-500">{page + 1} / {qnas.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page + 1 >= qnas.totalPages} onClick={() => setPage((current) => current + 1)}>
+          <span className="text-sm text-neutral-500">{isLoading ? "조회 중" : loadError ? `${page + 1}페이지 조회 실패` : `${page + 1} / ${totalPages}`}</span>
+          <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>
             다음
           </Button>
         </div>

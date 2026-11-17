@@ -1,3 +1,5 @@
+import type { Metadata } from "next"
+import { cache } from "react"
 import Link from "next/link"
 import { ArrowLeft, ShoppingBag, Sparkles } from "lucide-react"
 import { notFound } from "next/navigation"
@@ -11,6 +13,16 @@ import { getBeanTypeLabel, getRoastLevelLabel } from "@/lib/coffee-display"
 
 type CoffeeProfileDetailPageProps = {
   params: Promise<{ coffeeProfileId: string }>
+}
+
+export async function generateMetadata({ params }: CoffeeProfileDetailPageProps): Promise<Metadata> {
+  const { coffeeProfileId } = await params
+  try {
+    const profile = await loadProfile(coffeeProfileId)
+    return { title: `${profile.profileName} · 커피 프로필` }
+  } catch {
+    return { title: "커피 프로필 상세" }
+  }
 }
 
 export default async function CoffeeProfileDetailPage({
@@ -147,7 +159,7 @@ export default async function CoffeeProfileDetailPage({
   )
 }
 
-async function loadProfile(coffeeProfileId: string) {
+const loadProfile = cache(async (coffeeProfileId: string) => {
   try {
     return await getCoffeeProfile(coffeeProfileId, {
       next: { revalidate: 60, tags: ["coffee-profiles"] },
@@ -159,7 +171,7 @@ async function loadProfile(coffeeProfileId: string) {
 
     throw error
   }
-}
+})
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (

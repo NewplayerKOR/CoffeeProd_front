@@ -8,7 +8,8 @@ import {
   Plus,
   RotateCcw,
 } from "lucide-react"
-import { type FormEvent, useEffect, useState } from "react"
+import { Tabs } from "radix-ui"
+import { type FormEvent, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +25,8 @@ import {
   type CoffeeReference,
   type CoffeeReferenceKind,
 } from "@/lib/api/coffee"
-import { ApiError } from "@/lib/api/types"
+import { useFormErrorFocus } from "@/lib/form-feedback"
+import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 import { getBeanTypeLabel, getRoastLevelLabel } from "@/lib/coffee-display"
 
 import { CoffeeProfileAdminForm } from "./coffee-profile-admin-form"
@@ -65,6 +67,9 @@ const textareaClassName =
   "min-h-24 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-950 disabled:bg-neutral-100"
 
 export function CoffeeCatalogAdminView() {
+  const focusFormError = useFormErrorFocus()
+  const sectionRef = useRef<HTMLElement>(null)
+  const [referenceErrors, setReferenceErrors] = useState<Partial<ReferenceDraft>>({})
   const [activeTab, setActiveTab] = useState<CatalogTab>("profiles")
   const [profiles, setProfiles] = useState<CoffeeProfile[]>([])
   const [references, setReferences] =
@@ -170,23 +175,20 @@ export function CoffeeCatalogAdminView() {
   }
 
   async function saveProfile(payload: CoffeeProfileRequest) {
-    try {
-      if (profileEditor?.profile) {
-        await updateAdminCoffeeProfile(profileEditor.profile.id, payload)
-      } else {
-        await createAdminCoffeeProfile(payload)
-      }
-
-      await refreshProfiles()
-      setProfileEditor(null)
-      setMessageTone("success")
-      setMessage("커피 프로필을 저장했습니다.")
-    } catch (error) {
-      throw new Error(getAdminErrorMessage(error))
+    if (profileEditor?.profile) {
+      await updateAdminCoffeeProfile(profileEditor.profile.id, payload)
+    } else {
+      await createAdminCoffeeProfile(payload)
     }
+
+    await refreshProfiles()
+    setProfileEditor(null)
+    setMessageTone("success")
+    setMessage("커피 프로필을 저장했습니다.")
   }
 
   function startReferenceEditing(reference: CoffeeReference) {
+    setReferenceErrors({})
     setEditingReferenceId(reference.id)
     setReferenceDraft({
       code: reference.code,
@@ -197,6 +199,7 @@ export function CoffeeCatalogAdminView() {
   }
 
   function clearReferenceForm() {
+    setReferenceErrors({})
     setEditingReferenceId(null)
     setReferenceDraft(emptyReferenceDraft)
   }
@@ -211,9 +214,13 @@ export function CoffeeCatalogAdminView() {
     const code = referenceDraft.code.trim().toUpperCase()
     const name = referenceDraft.name.trim()
 
-    if ((!editingReferenceId && !code) || !name) {
-      setMessageTone("error")
-      setMessage("코드와 이름을 입력해 주세요.")
+    const nextErrors: Partial<ReferenceDraft> = {}
+    if (!editingReferenceId && !code) nextErrors.code = "코드를 입력해 주세요."
+    if (!name) nextErrors.name = "이름을 입력해 주세요."
+    setReferenceErrors(nextErrors)
+    if (Object.keys(nextErrors).length) {
+      setMessage(null)
+      focusFormError(sectionRef.current)
       return
     }
 
@@ -241,7 +248,9 @@ export function CoffeeCatalogAdminView() {
       setMessageTone("success")
       setMessage("기준정보를 저장했습니다.")
     } catch (error) {
+      if (error instanceof ApiError) setReferenceErrors(validationErrorsToFieldMap(error.errors))
       showError(error)
+      focusFormError(sectionRef.current)
     } finally {
       setIsSubmitting(false)
     }
@@ -251,265 +260,294 @@ export function CoffeeCatalogAdminView() {
     activeTab === "profiles" ? [] : references[activeTab]
 
   return (
-    <section className="flex flex-col gap-5">
-      <nav className="flex flex-wrap gap-2" aria-label="커피 카탈로그 관리 항목">
-        <Button
-          type="button"
-          variant={activeTab === "profiles" ? "default" : "outline"}
-          onClick={() => selectTab("profiles")}
-        >
-          <Bean data-icon="inline-start" />
-          커피 프로필
-        </Button>
-        {referenceTabs.map((tab) => (
-          <Button
-            key={tab.value}
-            type="button"
-            variant={activeTab === tab.value ? "default" : "outline"}
-            onClick={() => selectTab(tab.value)}
-          >
-            {tab.label}
-          </Button>
-        ))}
-      </nav>
-
-      {message && (
-        <p
-          className={
-            messageTone === "success"
-              ? "rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
-              : "rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
-          }
-          role={messageTone === "error" ? "alert" : "status"}
-        >
-          {message}
-        </p>
-      )}
-
-      {isLoading ? (
-        <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600 shadow-sm">
-          커피 카탈로그를 불러오고 있습니다.
-        </div>
-      ) : activeTab === "profiles" ? (
-        <div className="flex flex-col gap-5">
-          {profileEditor ? (
-            <CoffeeProfileAdminForm
-              key={profileEditor.key}
-              profile={profileEditor.profile}
-              processingMethods={references["processing-methods"]}
-              flavorNotes={references["flavor-notes"]}
-              brewMethods={references["brew-methods"]}
-              varieties={references["coffee-varieties"]}
-              onSave={saveProfile}
-              onCancel={() => setProfileEditor(null)}
-            />
-          ) : (
-            <div className="flex justify-end">
+    <Tabs.Root
+      value={activeTab}
+      onValueChange={(value) => selectTab(value as CatalogTab)}
+      activationMode="manual"
+      asChild
+    >
+      <section ref={sectionRef} className="flex min-w-0 flex-col gap-5">
+        <Tabs.List className="flex gap-2 overflow-x-auto p-1.5" aria-label="커피 카탈로그 관리 항목">
+          {[{ value: "profiles", label: "커피 프로필" }, ...referenceTabs].map((tab) => (
+            <Tabs.Trigger key={tab.value} value={tab.value} asChild>
               <Button
                 type="button"
-                onClick={() =>
-                  setProfileEditor({ key: `new-${Date.now()}`, profile: null })
-                }
+                className="catalog-tab"
+                variant={activeTab === tab.value ? "default" : "outline"}
               >
-                <Plus data-icon="inline-start" />
-                프로필 등록
+                {tab.value === "profiles" && <Bean data-icon="inline-start" />}
+                {tab.label}
               </Button>
-            </div>
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+        <Tabs.Content key={activeTab} value={activeTab} className="flex min-w-0 flex-col gap-5">
+          {message && (
+            <p
+              className={
+                messageTone === "success"
+                  ? "rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
+                  : "rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+              }
+              tabIndex={-1}
+              data-form-error={messageTone === "error" ? true : undefined}
+              role={messageTone === "error" ? "alert" : "status"}
+            >
+              {message}
+            </p>
           )}
 
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Bean className="size-5 text-neutral-500" />
-                <h2 className="text-lg font-bold">커피 프로필 목록</h2>
-              </div>
-              <span className="text-sm text-neutral-500">{profiles.length}개</span>
+          {isLoading ? (
+            <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600 shadow-sm">
+              커피 카탈로그를 불러오고 있습니다.
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {profiles.map((profile) => (
-                <article
-                  key={profile.id}
-                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-bold">{profile.profileName}</h3>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {getBeanTypeLabel(profile.beanType)} · {getRoastLevelLabel(profile.roastLevel)}
-                        {profile.decaf ? " · 디카페인" : ""}
+          ) : activeTab === "profiles" ? (
+            <div className="flex flex-col gap-5">
+              {profileEditor ? (
+                <CoffeeProfileAdminForm
+                  key={profileEditor.key}
+                  profile={profileEditor.profile}
+                  processingMethods={references["processing-methods"]}
+                  flavorNotes={references["flavor-notes"]}
+                  brewMethods={references["brew-methods"]}
+                  varieties={references["coffee-varieties"]}
+                  onSave={saveProfile}
+                  onCancel={() => setProfileEditor(null)}
+                />
+              ) : (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setProfileEditor({ key: `new-${Date.now()}`, profile: null })
+                    }
+                  >
+                    <Plus data-icon="inline-start" />
+                    프로필 등록
+                  </Button>
+                </div>
+              )}
+
+              <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Bean className="size-5 text-neutral-500" />
+                    <h2 className="text-lg font-bold">커피 프로필 목록</h2>
+                  </div>
+                  <span className="text-sm text-neutral-500">{profiles.length}개</span>
+                </div>
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {profiles.map((profile) => (
+                    <article
+                      key={profile.id}
+                      className="rounded-lg border border-neutral-200 bg-neutral-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-bold">{profile.profileName}</h3>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {getBeanTypeLabel(profile.beanType)} · {getRoastLevelLabel(profile.roastLevel)}
+                            {profile.decaf ? " · 디카페인" : ""}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label={`${profile.profileName} 프로필 ${pendingProfileId === profile.id ? "불러오는 중" : "수정"}`}
+                          aria-busy={pendingProfileId === profile.id}
+                          disabled={pendingProfileId === profile.id}
+                          onClick={() => void startProfileEditing(profile)}
+                        >
+                          <Pencil data-icon="inline-start" />
+                          {pendingProfileId === profile.id ? "불러오는 중" : "수정"}
+                        </Button>
+                      </div>
+                      <p className="mt-3 line-clamp-2 min-h-10 text-sm leading-5 text-neutral-600">
+                        {profile.summary || "등록된 프로필 설명이 없습니다."}
                       </p>
-                    </div>
+                    </article>
+                  ))}
+                </div>
+                {profiles.length === 0 && (
+                  <p className="mt-5 text-sm text-neutral-600">
+                    등록된 커피 프로필이 없습니다.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <form
+                className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
+                noValidate
+                aria-label="기준정보 편집"
+                onSubmit={saveReference}
+              >
+                <div className="flex items-center gap-2">
+                  {editingReferenceId ? (
+                    <Pencil className="size-5 text-neutral-500" />
+                  ) : (
+                    <Plus className="size-5 text-neutral-500" />
+                  )}
+                  <h2 className="text-lg font-bold">
+                    기준정보 {editingReferenceId ? "수정" : "생성"}
+                  </h2>
+                </div>
+
+                <label className="mt-5 block text-sm font-semibold" htmlFor="reference-code">
+                  코드
+                </label>
+                <input
+                  id="reference-code"
+                  name="code"
+                  required
+                  aria-invalid={Boolean(referenceErrors.code)}
+                  aria-describedby={referenceErrors.code ? "reference-code-error" : undefined}
+                  value={referenceDraft.code}
+                  maxLength={50}
+                  disabled={isSubmitting || editingReferenceId !== null}
+                  className={`${inputClassName} mt-2 uppercase`}
+                  placeholder="예: WASHED"
+                  onChange={(event) => {
+                    const { value } = event.currentTarget
+                    setReferenceErrors((current) => ({ ...current, code: undefined }))
+                    setMessage(null)
+                    setReferenceDraft((current) => ({
+                      ...current,
+                      code: value,
+                    }))
+                  }}
+                />
+                {referenceErrors.code && <p id="reference-code-error" className="mt-2 text-xs font-medium text-red-600">{referenceErrors.code}</p>}
+
+                <label className="mt-4 block text-sm font-semibold" htmlFor="reference-name">
+                  이름
+                </label>
+                <input
+                  id="reference-name"
+                  name="name"
+                  required
+                  aria-invalid={Boolean(referenceErrors.name)}
+                  aria-describedby={referenceErrors.name ? "reference-name-error" : undefined}
+                  value={referenceDraft.name}
+                  maxLength={100}
+                  disabled={isSubmitting}
+                  className={`${inputClassName} mt-2`}
+                  onChange={(event) => {
+                    const { value } = event.currentTarget
+                    setReferenceErrors((current) => ({ ...current, name: undefined }))
+                    setMessage(null)
+                    setReferenceDraft((current) => ({
+                      ...current,
+                      name: value,
+                    }))
+                  }}
+                />
+                {referenceErrors.name && <p id="reference-name-error" className="mt-2 text-xs font-medium text-red-600">{referenceErrors.name}</p>}
+
+                <label
+                  className="mt-4 block text-sm font-semibold"
+                  htmlFor="reference-description"
+                >
+                  설명
+                </label>
+                <textarea
+                  id="reference-description"
+                  name="description"
+                  aria-invalid={Boolean(referenceErrors.description)}
+                  aria-describedby={referenceErrors.description ? "reference-description-error" : undefined}
+                  value={referenceDraft.description}
+                  maxLength={500}
+                  disabled={isSubmitting}
+                  className={`${textareaClassName} mt-2`}
+                  onChange={(event) => {
+                    const { value } = event.currentTarget
+                    setReferenceErrors((current) => ({ ...current, description: undefined }))
+                    setMessage(null)
+                    setReferenceDraft((current) => ({
+                      ...current,
+                      description: value,
+                    }))
+                  }}
+                />
+                {referenceErrors.description && <p id="reference-description-error" className="mt-2 text-xs font-medium text-red-600">{referenceErrors.description}</p>}
+
+                <div className="mt-4 flex gap-2">
+                  <Button type="submit" disabled={isSubmitting}>
+                    <Check data-icon="inline-start" />
+                    {isSubmitting ? "저장 중" : "저장"}
+                  </Button>
+                  {editingReferenceId && (
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
-                      disabled={pendingProfileId === profile.id}
-                      onClick={() => void startProfileEditing(profile)}
+                      disabled={isSubmitting}
+                      onClick={clearReferenceForm}
                     >
-                      <Pencil data-icon="inline-start" />
-                      수정
+                      <RotateCcw data-icon="inline-start" />
+                      취소
                     </Button>
-                  </div>
-                  <p className="mt-3 line-clamp-2 min-h-10 text-sm leading-5 text-neutral-600">
-                    {profile.summary || "등록된 프로필 설명이 없습니다."}
-                  </p>
-                </article>
-              ))}
-            </div>
-            {profiles.length === 0 && (
-              <p className="mt-5 text-sm text-neutral-600">
-                등록된 커피 프로필이 없습니다.
-              </p>
-            )}
-          </div>
-        </div>
-      ) : (
-        <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <form
-            className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
-            onSubmit={saveReference}
-          >
-            <div className="flex items-center gap-2">
-              {editingReferenceId ? (
-                <Pencil className="size-5 text-neutral-500" />
-              ) : (
-                <Plus className="size-5 text-neutral-500" />
-              )}
-              <h2 className="text-lg font-bold">
-                기준정보 {editingReferenceId ? "수정" : "생성"}
-              </h2>
-            </div>
-
-            <label className="mt-5 block text-sm font-semibold" htmlFor="reference-code">
-              코드
-            </label>
-            <input
-              id="reference-code"
-              value={referenceDraft.code}
-              maxLength={50}
-              disabled={isSubmitting || editingReferenceId !== null}
-              className={`${inputClassName} mt-2 uppercase`}
-              placeholder="예: WASHED"
-              onChange={(event) => {
-                const { value } = event.currentTarget
-                setReferenceDraft((current) => ({
-                  ...current,
-                  code: value,
-                }))
-              }}
-            />
-
-            <label className="mt-4 block text-sm font-semibold" htmlFor="reference-name">
-              이름
-            </label>
-            <input
-              id="reference-name"
-              value={referenceDraft.name}
-              maxLength={100}
-              disabled={isSubmitting}
-              className={`${inputClassName} mt-2`}
-              onChange={(event) => {
-                const { value } = event.currentTarget
-                setReferenceDraft((current) => ({
-                  ...current,
-                  name: value,
-                }))
-              }}
-            />
-
-            <label
-              className="mt-4 block text-sm font-semibold"
-              htmlFor="reference-description"
-            >
-              설명
-            </label>
-            <textarea
-              id="reference-description"
-              value={referenceDraft.description}
-              maxLength={500}
-              disabled={isSubmitting}
-              className={`${textareaClassName} mt-2`}
-              onChange={(event) => {
-                const { value } = event.currentTarget
-                setReferenceDraft((current) => ({
-                  ...current,
-                  description: value,
-                }))
-              }}
-            />
-
-            <div className="mt-4 flex gap-2">
-              <Button type="submit" disabled={isSubmitting}>
-                <Check data-icon="inline-start" />
-                {isSubmitting ? "저장 중" : "저장"}
-              </Button>
-              {editingReferenceId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSubmitting}
-                  onClick={clearReferenceForm}
-                >
-                  <RotateCcw data-icon="inline-start" />
-                  취소
-                </Button>
-              )}
-            </div>
-          </form>
-
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Database className="size-5 text-neutral-500" />
-                <h2 className="text-lg font-bold">
-                  {referenceTabs.find((tab) => tab.value === activeTab)?.label} 목록
-                </h2>
-              </div>
-              <span className="text-sm text-neutral-500">
-                {activeReferences.length}개
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-neutral-500">
-              기준정보를 추가하거나 수정할 수 있습니다. 삭제는 지원하지 않습니다.
-            </p>
-            <div className="mt-5 flex flex-col gap-2">
-              {activeReferences.map((reference) => (
-                <div
-                  key={reference.id}
-                  className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold">{reference.name}</p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {reference.code} · ID {reference.id}
-                    </p>
-                    {reference.description && (
-                      <p className="mt-2 line-clamp-2 text-sm text-neutral-600">
-                        {reference.description}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => startReferenceEditing(reference)}
-                  >
-                    <Pencil data-icon="inline-start" />
-                    수정
-                  </Button>
+                  )}
                 </div>
-              ))}
-            </div>
-            {activeReferences.length === 0 && (
-              <p className="mt-5 text-sm text-neutral-600">
-                등록된 기준정보가 없습니다.
-              </p>
-            )}
-          </div>
-        </section>
-      )}
-    </section>
+              </form>
+
+              <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Database className="size-5 text-neutral-500" />
+                    <h2 className="text-lg font-bold">
+                      {referenceTabs.find((tab) => tab.value === activeTab)?.label} 목록
+                    </h2>
+                  </div>
+                  <span className="text-sm text-neutral-500">
+                    {activeReferences.length}개
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  기준정보를 추가하거나 수정할 수 있습니다. 삭제는 지원하지 않습니다.
+                </p>
+                <div className="mt-5 flex flex-col gap-2">
+                  {activeReferences.map((reference) => (
+                    <div
+                      key={reference.id}
+                      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold">{reference.name}</p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {reference.code} · ID {reference.id}
+                        </p>
+                        {reference.description && (
+                          <p className="mt-2 line-clamp-2 text-sm text-neutral-600">
+                            {reference.description}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={`${reference.name} (${reference.code}) 기준정보 수정`}
+                        onClick={() => startReferenceEditing(reference)}
+                      >
+                        <Pencil data-icon="inline-start" />
+                        수정
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {activeReferences.length === 0 && (
+                  <p className="mt-5 text-sm text-neutral-600">
+                    등록된 기준정보가 없습니다.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+        </Tabs.Content>
+      </section>
+    </Tabs.Root>
   )
 }
 

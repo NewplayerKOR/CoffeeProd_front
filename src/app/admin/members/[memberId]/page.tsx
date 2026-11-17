@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -11,6 +12,11 @@ type AdminMemberDetailPageProps = {
   params: Promise<{
     memberId: string
   }>
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ memberId: string }> }): Promise<Metadata> {
+  const { memberId } = await params
+  return { title: /^[1-9]\d*$/.test(memberId) ? `회원 상세 · 관리자 #${memberId}` : "회원 상세 · 관리자" }
 }
 
 export default async function AdminMemberDetailPage({

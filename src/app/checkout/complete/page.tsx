@@ -1,8 +1,11 @@
+import type { Metadata } from "next"
 import { CheckoutCompleteView } from "./checkout-complete-view"
 
 type CheckoutCompletePageProps = {
   searchParams: Promise<{ orderId?: string }>
 }
+
+export const metadata: Metadata = { title: "주문 완료" }
 
 export default async function CheckoutCompletePage({
   searchParams,

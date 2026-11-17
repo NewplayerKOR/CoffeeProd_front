@@ -326,7 +326,7 @@ export function MembersAdminView() {
 
                 <div className="flex flex-col gap-3 lg:w-[560px]">
                   <Button variant="outline" className="w-fit" asChild>
-                    <Link href={`/admin/members/${member.id}`}>상세 보기</Link>
+                    <Link href={`/admin/members/${member.id}`} aria-label={`${member.nickname} (${member.email}) 회원 상세 보기`}>상세 보기</Link>
                   </Button>
                   <div className="flex flex-col gap-2 md:flex-row">
                     <select
@@ -346,6 +346,8 @@ export function MembersAdminView() {
                       type="button"
                       variant="outline"
                       disabled={isGradePending || isStatusPending}
+                      aria-label={`${member.nickname} (${member.email}) 등급 변경${isGradePending ? " 중" : ""}`}
+                      aria-busy={isGradePending}
                       onClick={() => handleGradeSubmit(member)}
                     >
                       <ShieldCheck data-icon="inline-start" />
@@ -374,6 +376,8 @@ export function MembersAdminView() {
                     <Button
                       type="button"
                       disabled={isWithdrawn || isGradePending || isStatusPending}
+                      aria-label={`${member.nickname} (${member.email}) 상태 변경${isStatusPending ? " 중" : ""}`}
+                      aria-busy={isStatusPending}
                       onClick={() => handleStatusSubmit(member)}
                     >
                       <RefreshCw data-icon="inline-start" />

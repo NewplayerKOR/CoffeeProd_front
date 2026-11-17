@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import {
   BarChart3,
@@ -66,6 +67,8 @@ const adminLinks = [
     icon: BarChart3,
   },
 ]
+
+export const metadata: Metadata = { title: "관리자 콘솔" }
 
 export default function AdminPage() {
   return (

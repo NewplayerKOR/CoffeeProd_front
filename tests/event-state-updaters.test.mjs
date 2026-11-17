@@ -35,7 +35,7 @@ function loadHandler(file, attribute, expression, setter) {
   const compiled = ts.transpile(`const handler = ${handlers[0]}`, {
     target: ts.ScriptTarget.ES2020,
   })
-  return new Function(setter, `${compiled}; return handler`)
+  return new Function(setter, "setReferenceErrors", "setMessage", `${compiled}; return handler`)
 }
 
 for (const field of ["code", "name", "description", "decaf"]) {
@@ -45,7 +45,13 @@ for (const field of ["code", "name", "description", "decaf"]) {
       ? loadHandler("src/app/home-taste-finder.tsx", "checked", "{taste.decaf}", "setTaste")
       : loadHandler("src/app/admin/coffee-catalog/coffee-catalog-admin-view.tsx", "id", `"reference-${field}"`, "setReferenceDraft")
     const queue = []
-    const handler = createHandler((updater) => queue.push(updater))
+    const errorQueue = []
+    const messages = []
+    const handler = createHandler(
+      (updater) => queue.push(updater),
+      (updater) => errorQueue.push(updater),
+      (message) => messages.push(message)
+    )
     const inputs = checkbox ? [true, false, true, false] : ["원두", "", "붙여넣기 값", "연속 변경"]
     for (const value of inputs) {
       const event = { currentTarget: { [checkbox ? "checked" : "value"]: value } }
@@ -62,5 +68,14 @@ for (const field of ["code", "name", "description", "decaf"]) {
       assert.deepEqual(updater(state), next)
       state = { ...next, unrelated: `갱신 ${index}` }
     })
+    if (!checkbox) {
+      assert.deepEqual(messages, inputs.map(() => null))
+      assert.equal(errorQueue.length, inputs.length)
+      for (const updater of errorQueue) {
+        const errors = { [field]: "수정 전 오류", unrelated: "다른 입력 오류" }
+        assert.deepEqual(updater(errors), { [field]: undefined, unrelated: "다른 입력 오류" })
+        assert.equal(errors[field], "수정 전 오류")
+      }
+    }
   })
 }

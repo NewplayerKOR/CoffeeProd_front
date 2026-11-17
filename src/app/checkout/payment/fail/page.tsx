@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { AlertCircle, Home } from "lucide-react"
 
@@ -8,6 +9,8 @@ type PaymentFailPageProps = {
     internalOrderId?: string
   }>
 }
+
+export const metadata: Metadata = { title: "결제 실패" }
 
 export default async function PaymentFailPage({
   searchParams,

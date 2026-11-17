@@ -11,13 +11,17 @@ import {
   updateAdminCategory,
 } from "@/lib/api/admin"
 import { getCategories, getCategory, type Category } from "@/lib/api/catalog"
-import { ApiError } from "@/lib/api/types"
+import { useFormErrorFocus } from "@/lib/form-feedback"
+import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 
 const inputClassName =
   "h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
 
 export function AdminCategoriesView() {
+  const focusFormError = useFormErrorFocus()
   const [categories, setCategories] = useState<Category[]>([])
+  const [formErrors, setFormErrors] = useState<{ create?: string; edit?: string }>({})
+  const [formMessages, setFormMessages] = useState<{ create?: string; edit?: string }>({})
   const [draftName, setDraftName] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState("")
@@ -62,26 +66,33 @@ export function AdminCategoriesView() {
   }, [])
 
   function handleDraftChange(event: ChangeEvent<HTMLInputElement>) {
+    setFormErrors((current) => ({ ...current, create: undefined }))
+    setFormMessages((current) => ({ ...current, create: undefined }))
     setDraftName(event.currentTarget.value)
     setMessage(null)
   }
 
   function handleEditingChange(event: ChangeEvent<HTMLInputElement>) {
+    setFormErrors((current) => ({ ...current, edit: undefined }))
+    setFormMessages((current) => ({ ...current, edit: undefined }))
     setEditingName(event.currentTarget.value)
     setMessage(null)
   }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     const name = draftName.trim()
 
     if (!name) {
-      setMessageTone("error")
-      setMessage("카테고리명을 입력해 주세요.")
+      setFormErrors((current) => ({ ...current, create: "카테고리명을 입력해 주세요." }))
+      focusFormError(form)
       return
     }
 
+    setFormErrors((current) => ({ ...current, create: undefined }))
+    setFormMessages((current) => ({ ...current, create: undefined }))
     setIsSubmitting(true)
     setMessage(null)
 
@@ -93,8 +104,10 @@ export function AdminCategoriesView() {
       setMessageTone("success")
       setMessage("카테고리를 생성했습니다.")
     } catch (error) {
-      setMessageTone("error")
-      setMessage(getAdminErrorMessage(error))
+      const fieldMessage = error instanceof ApiError ? validationErrorsToFieldMap(error.errors).name : undefined
+      setFormErrors((current) => ({ ...current, create: fieldMessage }))
+      setFormMessages((current) => ({ ...current, create: getAdminErrorMessage(error) }))
+      focusFormError(form)
     } finally {
       setIsSubmitting(false)
     }
@@ -102,6 +115,7 @@ export function AdminCategoriesView() {
 
   async function handleUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     if (editingId === null) {
       return
@@ -110,11 +124,13 @@ export function AdminCategoriesView() {
     const name = editingName.trim()
 
     if (!name) {
-      setMessageTone("error")
-      setMessage("수정할 카테고리명을 입력해 주세요.")
+      setFormErrors((current) => ({ ...current, edit: "수정할 카테고리명을 입력해 주세요." }))
+      focusFormError(form)
       return
     }
 
+    setFormErrors((current) => ({ ...current, edit: undefined }))
+    setFormMessages((current) => ({ ...current, edit: undefined }))
     setIsSubmitting(true)
     setMessage(null)
 
@@ -130,14 +146,18 @@ export function AdminCategoriesView() {
       setMessageTone("success")
       setMessage("카테고리를 수정했습니다.")
     } catch (error) {
-      setMessageTone("error")
-      setMessage(getAdminErrorMessage(error))
+      const fieldMessage = error instanceof ApiError ? validationErrorsToFieldMap(error.errors).name : undefined
+      setFormErrors((current) => ({ ...current, edit: fieldMessage }))
+      setFormMessages((current) => ({ ...current, edit: getAdminErrorMessage(error) }))
+      focusFormError(form)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function startEditing(category: Category) {
+    setFormErrors((current) => ({ ...current, edit: undefined }))
+    setFormMessages((current) => ({ ...current, edit: undefined }))
     setPendingCategoryId(category.id)
     setMessage(null)
 
@@ -184,6 +204,8 @@ export function AdminCategoriesView() {
   }
 
   function clearEditing() {
+    setFormErrors((current) => ({ ...current, edit: undefined }))
+    setFormMessages((current) => ({ ...current, edit: undefined }))
     setEditingId(null)
     setEditingName("")
   }
@@ -193,6 +215,8 @@ export function AdminCategoriesView() {
       <div className="flex flex-col gap-5">
         <form
           className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
+          noValidate
+          aria-label="카테고리 생성"
           onSubmit={handleCreate}
         >
           <div className="flex items-center gap-2">
@@ -207,6 +231,10 @@ export function AdminCategoriesView() {
           </label>
           <input
             id="category-name"
+            name="name"
+            required
+            aria-invalid={Boolean(formErrors.create)}
+            aria-describedby={formErrors.create ? "category-name-error" : undefined}
             value={draftName}
             maxLength={50}
             disabled={isSubmitting}
@@ -214,6 +242,16 @@ export function AdminCategoriesView() {
             placeholder="예: 싱글 오리진"
             onChange={handleDraftChange}
           />
+          {formErrors.create && (
+            <p id="category-name-error" className="mt-2 text-xs font-medium text-red-600">
+              {formErrors.create}
+            </p>
+          )}
+          {formMessages.create && (
+            <p data-form-error tabIndex={-1} role="alert" className="mt-3 text-sm font-medium text-red-600">
+              {formMessages.create}
+            </p>
+          )}
           <Button type="submit" disabled={isSubmitting} className="mt-4 w-full">
             <Plus data-icon="inline-start" />
             {isSubmitting ? "처리 중" : "생성"}
@@ -223,6 +261,8 @@ export function AdminCategoriesView() {
         {editingId !== null && (
           <form
             className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
+            noValidate
+            aria-label="카테고리 수정"
             onSubmit={handleUpdate}
           >
             <div className="flex items-center gap-2">
@@ -237,12 +277,26 @@ export function AdminCategoriesView() {
             </label>
             <input
               id="editing-category-name"
+              name="name"
+              required
+              aria-invalid={Boolean(formErrors.edit)}
+              aria-describedby={formErrors.edit ? "editing-category-name-error" : undefined}
               value={editingName}
               maxLength={50}
               disabled={isSubmitting}
               className={`${inputClassName} mt-2`}
               onChange={handleEditingChange}
             />
+            {formErrors.edit && (
+              <p id="editing-category-name-error" className="mt-2 text-xs font-medium text-red-600">
+                {formErrors.edit}
+              </p>
+            )}
+            {formMessages.edit && (
+              <p data-form-error tabIndex={-1} role="alert" className="mt-3 text-sm font-medium text-red-600">
+                {formMessages.edit}
+              </p>
+            )}
             <div className="mt-4 flex gap-2">
               <Button type="submit" disabled={isSubmitting}>
                 <Check data-icon="inline-start" />
@@ -316,6 +370,7 @@ export function AdminCategoriesView() {
                   variant="outline"
                   size="sm"
                   disabled={pendingCategoryId === category.id}
+                  aria-label={`${category.name} 카테고리 수정`}
                   onClick={() => void startEditing(category)}
                 >
                   <Pencil data-icon="inline-start" />
@@ -326,6 +381,7 @@ export function AdminCategoriesView() {
                   variant="destructive"
                   size="sm"
                   disabled={pendingCategoryId === category.id}
+                  aria-label={`${category.name} 카테고리 삭제`}
                   onClick={() => void handleDelete(category)}
                 >
                   <Trash2 data-icon="inline-start" />

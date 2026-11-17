@@ -28,10 +28,12 @@ import { SiteFooter } from "@/components/site-footer"
 import { SocialAccountSettings } from "@/components/social-account-settings"
 import { SiteHeader } from "@/components/site-header"
 import { PasswordVisibilityButton } from "@/components/password-visibility-button"
+import { LoadError } from "@/components/load-error"
 import { Button } from "@/components/ui/button"
 import { useModalDialog } from "@/components/use-modal-dialog"
 import { getMe, type Member, type MemberGrade, type MemberStatus } from "@/lib/api/auth"
 import {
+  AUTH_TOKENS_CHANGED_EVENT,
   clearStoredAuthTokens,
   getStoredAuthTokens,
 } from "@/lib/api/auth-token-storage"
@@ -40,11 +42,12 @@ import {
   updateMemberProfile,
   withdrawMember,
 } from "@/lib/api/member"
+import { useFormErrorFocus } from "@/lib/form-feedback"
 import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 
 import { CartNavButton } from "../cart/cart-nav-button"
 
-type MyPageStatus = "checking" | "guest" | "ready"
+type MyPageStatus = "checking" | "guest" | "ready" | "error"
 type ProfileField = "nickname"
 type PasswordField = "currentPassword" | "newPassword" | "newPasswordConfirm"
 type WithdrawField = "currentPassword"
@@ -59,8 +62,11 @@ const inputClassName =
   "h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
 
 export function MyPageView() {
+  const focusFormError = useFormErrorFocus()
   const router = useRouter()
   const [status, setStatus] = useState<MyPageStatus>("checking")
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [member, setMember] = useState<Member | null>(null)
   const [nickname, setNickname] = useState("")
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({})
@@ -81,42 +87,48 @@ export function MyPageView() {
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [withdrawDialog, setWithdrawDialog] = useState<WithdrawDialog>(null)
   const withdrawPendingRef = useRef(false)
+  const withdrawFormRef = useRef<HTMLFormElement>(null)
   const withdrawSubmitRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isActive = true
-
-    async function loadMember() {
+    function checkTokens() {
       if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setStatus("guest")
-        }
+        isActive = false
+        setStatus("guest")
+      }
+    }
+    window.addEventListener(AUTH_TOKENS_CHANGED_EVENT, checkTokens)
+
+    async function load() {
+      if (!getStoredAuthTokens()) {
+        if (isActive) setStatus("guest")
         return
       }
-
+      setStatus("checking")
+      setLoadError(null)
       try {
-        const currentMember = await getMe()
-
-        if (isActive) {
-          setMember(currentMember)
-          setNickname(currentMember.nickname)
-          setStatus("ready")
-        }
-      } catch {
-        clearStoredAuthTokens()
-
-        if (isActive) {
+        const data = await getMe()
+        if (!isActive) return
+        setMember(data)
+        setNickname(data.nickname)
+        setStatus("ready")
+      } catch (error) {
+        if (!isActive) return
+        if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
           setStatus("guest")
+        } else {
+          setLoadError(error)
+          setStatus("error")
         }
       }
     }
-
-    void loadMember()
-
+    void load()
     return () => {
       isActive = false
+      window.removeEventListener(AUTH_TOKENS_CHANGED_EVENT, checkTokens)
     }
-  }, [])
+  }, [retryCount])
 
   function handleNicknameChange(event: ChangeEvent<HTMLInputElement>) {
     setNickname(event.currentTarget.value)
@@ -141,6 +153,7 @@ export function MyPageView() {
 
   async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     const normalizedNickname = nickname.trim()
     const nextErrors = validateProfile(normalizedNickname)
@@ -149,9 +162,11 @@ export function MyPageView() {
       setProfileErrors(nextErrors)
       setProfileMessageTone("error")
       setProfileMessage("닉네임을 다시 확인해 주세요.")
+      focusFormError(form, "profile-message")
       return
     }
 
+    setProfileErrors({})
     setIsProfileSubmitting(true)
     setProfileMessage(null)
 
@@ -172,6 +187,7 @@ export function MyPageView() {
 
       setProfileMessageTone("error")
       setProfileMessage(getMemberErrorMessage(error))
+      focusFormError(form, "profile-message")
     } finally {
       setIsProfileSubmitting(false)
     }
@@ -179,6 +195,7 @@ export function MyPageView() {
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     const nextErrors = validatePassword(passwordForm)
 
@@ -186,9 +203,11 @@ export function MyPageView() {
       setPasswordErrors(nextErrors)
       setMessageTone("error")
       setMessage("비밀번호 입력 값을 다시 확인해 주세요.")
+      focusFormError(form, "member-form-message")
       return
     }
 
+    setPasswordErrors({})
     setIsPasswordSubmitting(true)
     setMessage(null)
 
@@ -208,6 +227,7 @@ export function MyPageView() {
 
       setMessageTone("error")
       setMessage(getMemberErrorMessage(error))
+      focusFormError(form, "member-form-message")
     } finally {
       setIsPasswordSubmitting(false)
     }
@@ -215,6 +235,7 @@ export function MyPageView() {
 
   async function handleWithdrawSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     if (!withdrawPassword) {
       setWithdrawErrors({
@@ -222,9 +243,11 @@ export function MyPageView() {
       })
       setMessageTone("error")
       setMessage("회원 탈퇴를 위해 현재 비밀번호가 필요합니다.")
+      focusFormError(form, "member-form-message")
       return
     }
 
+    setWithdrawErrors({})
     setMessage(null)
     setWithdrawDialog("confirm")
   }
@@ -252,12 +275,7 @@ export function MyPageView() {
       setMessageTone("error")
       setMessage(getMemberErrorMessage(error))
       setWithdrawDialog(null)
-      // 처리 중 비활성화된 호출 버튼은 native 초점 복귀에서 제외될 수 있다.
-      requestAnimationFrame(() => {
-        if (document.activeElement === document.body) {
-          withdrawSubmitRef.current?.focus({ preventScroll: true })
-        }
-      })
+      focusFormError(withdrawFormRef.current, "member-form-message")
     } finally {
       withdrawPendingRef.current = false
       setIsWithdrawing(false)
@@ -282,6 +300,10 @@ export function MyPageView() {
           </section>
         )}
 
+        {status === "error" && (
+          <LoadError title="회원 정보를 불러오지 못했습니다." error={loadError} onRetry={() => setRetryCount((current) => current + 1)} loginHref="/login?redirect=/me" />
+        )}
+
         {status === "guest" && (
           <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
@@ -301,13 +323,13 @@ export function MyPageView() {
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="flex min-w-0 flex-col gap-6">
               {message && (
-                <p
+                <p id="member-form-message" tabIndex={-1}
                   className={
                     messageTone === "success"
                       ? "rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
                       : "rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
                   }
-                  role="status"
+                  role={messageTone === "error" ? "alert" : "status"}
                 >
                   {message}
                 </p>
@@ -348,7 +370,7 @@ export function MyPageView() {
                   <h2 className="text-lg font-bold">내 정보 수정</h2>
                 </div>
                 {profileMessage && (
-                  <p
+                  <p id="profile-message" tabIndex={-1}
                     className={
                       profileMessageTone === "success"
                         ? "mt-4 animate-success-pop rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
@@ -361,6 +383,8 @@ export function MyPageView() {
                 )}
                 <form
                   className="mt-5 flex flex-col gap-4 md:max-w-md"
+                  noValidate
+                  aria-label="내 정보 수정"
                   onSubmit={handleProfileSubmit}
                 >
                   <div>
@@ -373,6 +397,8 @@ export function MyPageView() {
                     <input
                       id="nickname"
                       name="nickname"
+                      required
+                      autoComplete="nickname"
                       value={nickname}
                       maxLength={50}
                       disabled={isProfileSubmitting}
@@ -409,6 +435,8 @@ export function MyPageView() {
                 </div>
                 <form
                   className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3"
+                  noValidate
+                  aria-label="비밀번호 변경"
                   onSubmit={handlePasswordSubmit}
                 >
                   <PasswordInput
@@ -454,6 +482,9 @@ export function MyPageView() {
                 </p>
                 <form
                   className="mt-5 flex flex-col gap-4 md:max-w-md"
+                  noValidate
+                  aria-label="회원 탈퇴"
+                  ref={withdrawFormRef}
                   onSubmit={handleWithdrawSubmit}
                 >
                   <PasswordInput
@@ -559,6 +590,8 @@ function PasswordInput({
         <input
           id={inputId}
           name={name}
+          required
+          autoComplete={name === "currentPassword" ? "current-password" : "new-password"}
           type={visible ? "text" : "password"}
           value={value}
           disabled={disabled}

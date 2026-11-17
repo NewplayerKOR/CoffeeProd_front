@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { PaymentConfirmView } from "./payment-confirm-view"
 
 type PaymentPageProps = {
@@ -7,6 +8,8 @@ type PaymentPageProps = {
     amount?: string
   }>
 }
+
+export const metadata: Metadata = { title: "결제 확인" }
 
 export default async function PaymentPage({ searchParams }: PaymentPageProps) {
   const { orderId, tossOrderId, amount } = await searchParams

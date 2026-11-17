@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { OrdersView } from "./orders-view"
 
 type OrdersPageProps = {
@@ -5,6 +6,8 @@ type OrdersPageProps = {
     page?: string | string[]
   }>
 }
+
+export const metadata: Metadata = { title: "주문 내역" }
 
 export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const { page } = await searchParams

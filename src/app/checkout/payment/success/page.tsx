@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { PaymentSuccessView } from "./payment-success-view"
 
 type PaymentSuccessPageProps = {
@@ -7,6 +8,8 @@ type PaymentSuccessPageProps = {
     amount?: string
   }>
 }
+
+export const metadata: Metadata = { title: "결제 승인 처리" }
 
 export default async function PaymentSuccessPage({
   searchParams,

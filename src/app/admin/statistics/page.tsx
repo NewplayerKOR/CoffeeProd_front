@@ -1,6 +1,9 @@
+import type { Metadata } from "next"
 import { AdminAuthGuard } from "../admin-auth-guard"
 import { AdminPageShell } from "../admin-page-shell"
 import { SalesStatisticsView } from "./sales-statistics-view"
+
+export const metadata: Metadata = { title: "매출 통계 · 관리자" }
 
 export default function AdminStatisticsPage() {
   return (

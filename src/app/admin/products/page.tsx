@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
@@ -6,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { AdminAuthGuard } from "../admin-auth-guard"
 import { AdminPageShell } from "../admin-page-shell"
 import { ProductsAdminView } from "./products-admin-view"
+
+export const metadata: Metadata = { title: "상품 관리" }
 
 export default function AdminProductsPage() {
   return (

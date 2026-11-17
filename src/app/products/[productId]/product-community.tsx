@@ -7,28 +7,26 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
-  useEffect,
   useState,
 } from "react"
 
+import { LoadError } from "@/components/load-error"
+import { useSessionState } from "@/components/session-state-provider"
+import { useRemoteQuery } from "@/lib/use-remote-query"
 import { Button } from "@/components/ui/button"
-import { getMe } from "@/lib/api/auth"
-import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import {
   createQna,
   deleteQna,
   getProductQnas,
-  type Qna,
   updateQna,
 } from "@/lib/api/qna"
 import {
   createReview,
   deleteReview,
   getProductReviews,
-  type Review,
   updateReview,
 } from "@/lib/api/review"
-import { ApiError, type PageResponse } from "@/lib/api/types"
+import { ApiError } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 const textareaClassName =
@@ -41,62 +39,20 @@ type ProductCommunityProps = {
 }
 
 export function ProductReviews({ productId }: ProductCommunityProps) {
-  const nickname = useCurrentNickname()
-  const [reviews, setReviews] = useState<PageResponse<Review> | null>(null)
+  const session = useSessionState()
+  const nickname = session.status === "authenticated" ? session.member?.nickname ?? null : null
   const [page, setPage] = useState(0)
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadReviews = useCallback(async () => {
-    try {
-      setReviews(
-        await getProductReviews(productId, {
-          page,
-          size: 10,
-          sort: "createdAt,desc",
-        })
-      )
-    } catch (error) {
-      setMessage(getCommunityErrorMessage(error, "리뷰를 불러오지 못했습니다."))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, productId])
-
-  useEffect(() => {
-    let isActive = true
-
-    void getProductReviews(productId, {
-      page,
-      size: 10,
-      sort: "createdAt,desc",
-    })
-      .then((nextReviews) => {
-        if (isActive) {
-          setReviews(nextReviews)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isActive) {
-          setMessage(
-            getCommunityErrorMessage(error, "리뷰를 불러오지 못했습니다.")
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [page, productId])
+  const query = useRemoteQuery(
+    `reviews:${productId}:${page}`,
+    useCallback(() => getProductReviews(productId, { page, size: 10, sort: "createdAt,desc" }), [page, productId])
+  )
+  const { data: reviews, error: loadError, isLoading, reload: loadReviews } = query
 
   const myReview = reviews?.content.find((review) => review.nickname === nickname)
 
@@ -130,7 +86,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
       setEditingId(null)
       setRating(5)
       setContent("")
-      await loadReviews()
+      loadReviews()
     } catch (error) {
       setMessage(getCommunityErrorMessage(error, "리뷰 요청을 처리하지 못했습니다."))
     } finally {
@@ -152,7 +108,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
       setEditingId(null)
       setContent("")
       setMessage("리뷰를 삭제했습니다.")
-      await loadReviews()
+      loadReviews()
     } catch (error) {
       setMessage(getCommunityErrorMessage(error, "리뷰를 삭제하지 못했습니다."))
     } finally {
@@ -170,7 +126,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
           </p>
         </div>
         <span className="text-sm font-medium text-neutral-500">
-          총 {reviews?.totalElements ?? 0}개
+          {reviews ? `총 ${reviews.totalElements}개` : "개수 확인 전"}
         </span>
       </div>
 
@@ -180,7 +136,11 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
         </p>
       )}
 
-      {nickname && (!myReview || editingId) ? (
+      {session.status === "checking" ? (
+        <p className="mt-5 text-sm text-neutral-500">로그인 상태를 확인하고 있습니다.</p>
+      ) : session.status === "error" ? (
+        <LoadError title="로그인 상태를 확인하지 못했습니다." error={null} onRetry={() => void session.refreshSession()} />
+      ) : (nickname && (!myReview || editingId)) && !isLoading && !loadError ? (
         <form className="mt-5 rounded-lg border border-neutral-200 bg-neutral-50 p-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-4 sm:flex-row">
             <label className="sm:w-36">
@@ -240,6 +200,8 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
       <div className="mt-6 flex flex-col gap-3">
         {isLoading ? (
           <EmptyCommunityState>리뷰를 불러오고 있습니다.</EmptyCommunityState>
+        ) : loadError ? (
+          <LoadError title="리뷰를 불러오지 못했습니다." error={loadError} onRetry={loadReviews} />
         ) : reviews?.content.length ? (
           reviews.content.map((review) => {
             const isOwner = review.nickname === nickname
@@ -305,7 +267,9 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
 
       <Pagination
         page={page}
-        totalPages={reviews?.totalPages ?? 0}
+        totalPages={reviews?.totalPages ?? query.previousData?.totalPages ?? 0}
+        isLoading={isLoading}
+        failed={Boolean(loadError)}
         onPageChange={setPage}
       />
     </section>
@@ -313,62 +277,20 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
 }
 
 export function ProductQnas({ productId }: ProductCommunityProps) {
-  const nickname = useCurrentNickname()
-  const [qnas, setQnas] = useState<PageResponse<Qna> | null>(null)
+  const session = useSessionState()
+  const nickname = session.status === "authenticated" ? session.member?.nickname ?? null : null
   const [page, setPage] = useState(0)
   const [title, setTitle] = useState("")
   const [question, setQuestion] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadQnas = useCallback(async () => {
-    try {
-      setQnas(
-        await getProductQnas(productId, {
-          page,
-          size: 10,
-          sort: "createdAt,desc",
-        })
-      )
-    } catch (error) {
-      setMessage(getCommunityErrorMessage(error, "상품 문의를 불러오지 못했습니다."))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, productId])
-
-  useEffect(() => {
-    let isActive = true
-
-    void getProductQnas(productId, {
-      page,
-      size: 10,
-      sort: "createdAt,desc",
-    })
-      .then((nextQnas) => {
-        if (isActive) {
-          setQnas(nextQnas)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isActive) {
-          setMessage(
-            getCommunityErrorMessage(error, "상품 문의를 불러오지 못했습니다.")
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [page, productId])
+  const query = useRemoteQuery(
+    `qnas:${productId}:${page}`,
+    useCallback(() => getProductQnas(productId, { page, size: 10, sort: "createdAt,desc" }), [page, productId])
+  )
+  const { data: qnas, error: loadError, isLoading, reload: loadQnas } = query
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -398,7 +320,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
       }
 
       resetQnaForm()
-      await loadQnas()
+      loadQnas()
     } catch (error) {
       setMessage(getCommunityErrorMessage(error, "상품 문의 요청을 처리하지 못했습니다."))
     } finally {
@@ -419,7 +341,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
       await deleteQna(qnaId)
       resetQnaForm()
       setMessage("상품 문의를 삭제했습니다.")
-      await loadQnas()
+      loadQnas()
     } catch (error) {
       setMessage(getCommunityErrorMessage(error, "상품 문의를 삭제하지 못했습니다."))
     } finally {
@@ -440,7 +362,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
           <h2 className="text-xl font-bold">상품 Q&A</h2>
           <p className="mt-1 text-sm text-neutral-500">상품과 배송에 대해 궁금한 내용을 남겨주세요.</p>
         </div>
-        <span className="text-sm font-medium text-neutral-500">총 {qnas?.totalElements ?? 0}개</span>
+        <span className="text-sm font-medium text-neutral-500">{qnas ? `총 ${qnas.totalElements}개` : "개수 확인 전"}</span>
       </div>
 
       {message && (
@@ -449,7 +371,11 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
         </p>
       )}
 
-      {nickname ? (
+      {session.status === "checking" ? (
+        <p className="mt-5 text-sm text-neutral-500">로그인 상태를 확인하고 있습니다.</p>
+      ) : session.status === "error" ? (
+        <LoadError title="로그인 상태를 확인하지 못했습니다." error={null} onRetry={() => void session.refreshSession()} />
+      ) : (nickname) && !isLoading && !loadError ? (
         <form className="mt-5 rounded-lg border border-neutral-200 bg-neutral-50 p-4" onSubmit={handleSubmit}>
           <label>
             <span className="mb-2 block text-sm font-semibold">문의 제목</span>
@@ -485,15 +411,17 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
             )}
           </div>
         </form>
-      ) : (
+      ) : !nickname ? (
         <p className="mt-5 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
           문의를 작성하려면 <Link href="/login" className="font-semibold underline">로그인</Link>해 주세요.
         </p>
-      )}
+      ) : null}
 
       <div className="mt-6 flex flex-col gap-3">
         {isLoading ? (
           <EmptyCommunityState>상품 문의를 불러오고 있습니다.</EmptyCommunityState>
+        ) : loadError ? (
+          <LoadError title="상품 문의를 불러오지 못했습니다." error={loadError} onRetry={loadQnas} />
         ) : qnas?.content.length ? (
           qnas.content.map((qna) => {
             const canEdit = qna.nickname === nickname && qna.status === "WAITING"
@@ -564,44 +492,22 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
         )}
       </div>
 
-      <Pagination page={page} totalPages={qnas?.totalPages ?? 0} onPageChange={setPage} />
+      <Pagination page={page} totalPages={qnas?.totalPages ?? query.previousData?.totalPages ?? 0} isLoading={isLoading} failed={Boolean(loadError)} onPageChange={setPage} />
     </section>
   )
-}
-
-function useCurrentNickname() {
-  const [nickname, setNickname] = useState<string | null>(null)
-
-  useEffect(() => {
-    let isActive = true
-
-    if (!getStoredAuthTokens()) {
-      return
-    }
-
-    void getMe()
-      .then((member) => {
-        if (isActive) {
-          setNickname(member.nickname)
-        }
-      })
-      .catch(() => undefined)
-
-    return () => {
-      isActive = false
-    }
-  }, [])
-
-  return nickname
 }
 
 function Pagination({
   page,
   totalPages,
   onPageChange,
+  isLoading,
+  failed,
 }: {
   page: number
   totalPages: number
+  isLoading: boolean
+  failed: boolean
   onPageChange: (page: number) => void
 }) {
   if (totalPages <= 1) {
@@ -613,7 +519,7 @@ function Pagination({
       <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => onPageChange(page - 1)}>
         이전
       </Button>
-      <span className="text-sm text-neutral-500">{page + 1} / {totalPages}</span>
+      <span className="text-sm text-neutral-500">{isLoading ? "조회 중" : failed ? `${page + 1}페이지 조회 실패` : `${page + 1} / ${totalPages}`}</span>
       <Button type="button" variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => onPageChange(page + 1)}>
         다음
       </Button>

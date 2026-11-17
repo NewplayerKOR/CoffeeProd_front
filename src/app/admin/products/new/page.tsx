@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -5,6 +6,8 @@ import { ArrowLeft } from "lucide-react"
 import { AdminAuthGuard } from "../../admin-auth-guard"
 import { AdminPageShell } from "../../admin-page-shell"
 import { ProductAdminForm } from "../product-admin-form"
+
+export const metadata: Metadata = { title: "상품 등록 · 관리자" }
 
 export default function AdminProductNewPage() {
   return (

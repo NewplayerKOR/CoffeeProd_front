@@ -362,13 +362,15 @@ export function ProductsAdminView() {
                       type="button"
                       variant="outline"
                       disabled={hasPendingAction}
+                      aria-label={`${product.name} 상태 변경${isStatusPending ? " 중" : ""}`}
+                      aria-busy={isStatusPending}
                       onClick={() => handleStatusSubmit(product)}
                     >
                       <RefreshCw data-icon="inline-start" />
                       {isStatusPending ? "변경 중" : "상태 변경"}
                     </Button>
                     <Button variant="outline" asChild>
-                      <Link href={`/admin/products/${product.id}/edit`}>
+                      <Link href={`/admin/products/${product.id}/edit`} aria-label={`${product.name} 상품 수정`}>
                         <Pencil data-icon="inline-start" />
                         수정
                       </Link>
@@ -377,6 +379,8 @@ export function ProductsAdminView() {
                       type="button"
                       variant="destructive"
                       disabled={hasPendingAction || product.status === "HIDDEN"}
+                      aria-label={`${product.name} 삭제 처리${isDeletePending ? " 중" : ""}`}
+                      aria-busy={isDeletePending}
                       onClick={() => handleDeleteProduct(product)}
                     >
                       <Trash2 data-icon="inline-start" />
@@ -400,6 +404,8 @@ export function ProductsAdminView() {
                     />
                     <Button
                       type="submit"
+                      aria-label={`${product.name} ${isStockPending ? "재고 추가 중" : "재고 추가"}`}
+                      aria-busy={isStockPending}
                       disabled={hasPendingAction}
                     >
                       <PackagePlus data-icon="inline-start" />

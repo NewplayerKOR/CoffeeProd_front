@@ -24,6 +24,7 @@ import {
 
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { LoadError } from "@/components/load-error"
 import { Button } from "@/components/ui/button"
 import {
   createAddress,
@@ -35,11 +36,12 @@ import {
   type Address,
   type AddressRequest,
 } from "@/lib/api/address"
-import { getStoredAuthTokens } from "@/lib/api/auth-token-storage"
+import { AUTH_TOKENS_CHANGED_EVENT, getStoredAuthTokens } from "@/lib/api/auth-token-storage"
 import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
+import { useFormErrorFocus } from "@/lib/form-feedback"
 import { cn } from "@/lib/utils"
 
-type AddressStatus = "checking" | "guest" | "ready"
+type AddressStatus = "checking" | "guest" | "ready" | "error"
 type AddressField = keyof AddressRequest
 type AddressFormData = AddressRequest
 type FieldErrors = Partial<Record<AddressField, string>>
@@ -74,13 +76,24 @@ const emptyFormData: AddressFormData = {
   addressLine2: "",
 }
 
+const addressAutoComplete: Record<AddressField, string> = {
+  recipient: "shipping name",
+  phone: "shipping tel",
+  zipcode: "shipping postal-code",
+  addressLine1: "shipping address-line1",
+  addressLine2: "shipping address-line2",
+}
+
 const fieldErrorClassName = "mt-1.5 text-xs font-medium text-red-600"
 const inputClassName =
   "h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-400"
 
 export function AddressManager() {
+  const focusFormError = useFormErrorFocus()
   const detailAddressRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<AddressStatus>("checking")
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [formData, setFormData] = useState<AddressFormData>(emptyFormData)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -97,52 +110,47 @@ export function AddressManager() {
   )
   const canAddAddress = addresses.length < 5 || Boolean(editingAddress)
 
-  async function refreshAddresses() {
-    const nextAddresses = await getAddresses()
-    setAddresses(nextAddresses)
-    return nextAddresses
+  function refreshAddresses() {
+    setRetryCount((current) => current + 1)
   }
-
   useEffect(() => {
     let isActive = true
-
-    async function loadAddresses() {
+    function checkTokens() {
       if (!getStoredAuthTokens()) {
-        if (isActive) {
-          setStatus("guest")
-        }
+        isActive = false
+        setStatus("guest")
+      }
+    }
+    window.addEventListener(AUTH_TOKENS_CHANGED_EVENT, checkTokens)
+
+    async function load() {
+      if (!getStoredAuthTokens()) {
+        if (isActive) setStatus("guest")
         return
       }
-
+      setStatus("checking")
+      setLoadError(null)
       try {
-        const nextAddresses = await getAddresses()
-
-        if (isActive) {
-          setAddresses(nextAddresses)
-          setStatus("ready")
-        }
+        const data = await getAddresses()
+        if (!isActive) return
+        setAddresses((current) => preserveAddressOrder(current, data))
+        setStatus("ready")
       } catch (error) {
+        if (!isActive) return
         if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
-          if (isActive) {
-            setStatus("guest")
-          }
-          return
-        }
-
-        if (isActive) {
-          setMessageTone("error")
-          setMessage(getAddressErrorMessage(error))
-          setStatus("ready")
+          setStatus("guest")
+        } else {
+          setLoadError(error)
+          setStatus("error")
         }
       }
     }
-
-    void loadAddresses()
-
+    void load()
     return () => {
       isActive = false
+      window.removeEventListener(AUTH_TOKENS_CHANGED_EVENT, checkTokens)
     }
-  }, [])
+  }, [retryCount])
 
   function handleInputChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -249,6 +257,7 @@ export function AddressManager() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
 
     const payload = normalizeFormData(formData)
     const nextErrors = validateAddress(payload)
@@ -257,6 +266,7 @@ export function AddressManager() {
       setFieldErrors(nextErrors)
       setMessageTone("error")
       setMessage("입력 값을 다시 확인해 주세요.")
+      focusFormError(form, "address-message")
       return
     }
 
@@ -273,11 +283,11 @@ export function AddressManager() {
     try {
       if (editingAddress) {
         await updateAddress(editingAddress.id, payload)
-        await refreshAddresses()
+        refreshAddresses()
         setMessage("배송지를 수정했습니다.")
       } else {
         await createAddress(payload)
-        await refreshAddresses()
+        refreshAddresses()
         setMessage("배송지를 등록했습니다.")
       }
 
@@ -293,6 +303,7 @@ export function AddressManager() {
 
       setMessageTone("error")
       setMessage(getAddressErrorMessage(error))
+      focusFormError(form, "address-message")
     } finally {
       setIsSubmitting(false)
     }
@@ -303,15 +314,8 @@ export function AddressManager() {
     setMessage(null)
 
     try {
-      const defaultAddress = await setDefaultAddress(addressId)
-      const refreshedAddresses = await getAddresses()
-
-      setAddresses((current) =>
-        preserveAddressOrder(current, refreshedAddresses).map((address) => ({
-          ...address,
-          isDefault: address.id === defaultAddress.id,
-        }))
-      )
+      await setDefaultAddress(addressId)
+      refreshAddresses()
       setMessageTone("success")
       setMessage("기본 배송지를 변경했습니다.")
     } catch (error) {
@@ -333,7 +337,7 @@ export function AddressManager() {
 
     try {
       await deleteAddress(addressId)
-      await refreshAddresses()
+      refreshAddresses()
 
       if (editingAddressId === addressId) {
         resetForm()
@@ -378,6 +382,10 @@ export function AddressManager() {
           </section>
         )}
 
+        {status === "error" && (
+          <LoadError title="배송지 목록을 불러오지 못했습니다." error={loadError} onRetry={() => setRetryCount((current) => current + 1)} loginHref="/login?redirect=/me/addresses" />
+        )}
+
         {status === "guest" && (
           <section className="rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-neutral-100">
@@ -397,7 +405,7 @@ export function AddressManager() {
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
             <div className="flex flex-col gap-4">
               {message && (
-                <p
+                <p id="address-message" tabIndex={-1}
                   className={
                     messageTone === "success"
                       ? "rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700"
@@ -469,6 +477,7 @@ export function AddressManager() {
                             variant="outline"
                             size="sm"
                             disabled={isPending}
+                            aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 기본 설정`}
                             onClick={() => handleSetDefault(address.id)}
                           >
                             <Check data-icon="inline-start" />
@@ -480,6 +489,7 @@ export function AddressManager() {
                           variant="outline"
                           size="sm"
                           disabled={isPending}
+                          aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 수정`}
                           onClick={() => void startEdit(address)}
                         >
                           <Pencil data-icon="inline-start" />
@@ -490,6 +500,7 @@ export function AddressManager() {
                           variant="ghost"
                           size="sm"
                           disabled={isPending}
+                          aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 삭제`}
                           onClick={() => handleDelete(address.id)}
                         >
                           <Trash2 data-icon="inline-start" />
@@ -530,7 +541,7 @@ export function AddressManager() {
                 </p>
               )}
 
-              <form className="mt-5 flex flex-col gap-4" onSubmit={handleSubmit}>
+              <form noValidate aria-label="배송지 정보" className="mt-5 flex flex-col gap-4" onSubmit={handleSubmit}>
                 <AddressInput
                   label="수령인"
                   name="recipient"
@@ -658,7 +669,11 @@ function AddressInput({
           placeholder={placeholder}
           disabled={disabled}
           readOnly={readOnly}
-          inputMode={name === "phone" || name === "zipcode" ? "numeric" : undefined}
+          required
+          aria-required="true"
+          type={name === "phone" ? "tel" : "text"}
+          autoComplete={addressAutoComplete[name]}
+          inputMode={name === "phone" ? "tel" : name === "zipcode" ? "numeric" : undefined}
           className={cn(
             inputClassName,
             readOnly && "cursor-pointer bg-neutral-50"

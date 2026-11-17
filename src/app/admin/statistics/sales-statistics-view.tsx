@@ -196,27 +196,28 @@ export function SalesStatisticsView() {
       <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-neutral-200 p-4">
           <BarChart3 className="size-5 text-neutral-500" />
-          <h2 className="font-bold">기간별 매출</h2>
+          <h2 id="sales-table-title" className="font-bold">기간별 매출</h2>
         </div>
         {isLoading ? (
           <p className="p-8 text-center text-sm text-neutral-500">매출 통계를 불러오고 있습니다.</p>
         ) : statistics.length ? (
-          <div className="overflow-x-auto">
+          <div className="sales-table-scroll overflow-x-auto" role="region" aria-labelledby="sales-table-title" tabIndex={0}>
             <table className="w-full min-w-[760px] text-left text-sm">
+              <caption className="sr-only">기간별 주문 수와 상품 매출, 배송비, 사용 마일리지, 실제 결제액</caption>
               <thead className="bg-neutral-50 text-neutral-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">기간</th>
-                  <th className="px-4 py-3 font-medium">주문</th>
-                  <th className="px-4 py-3 font-medium">상품 매출</th>
-                  <th className="px-4 py-3 font-medium">배송비</th>
-                  <th className="px-4 py-3 font-medium">마일리지</th>
-                  <th className="px-4 py-3 font-medium">실제 결제액</th>
+                  <th scope="col" className="px-4 py-3 font-medium">기간</th>
+                  <th scope="col" className="px-4 py-3 font-medium">주문</th>
+                  <th scope="col" className="px-4 py-3 font-medium">상품 매출</th>
+                  <th scope="col" className="px-4 py-3 font-medium">배송비</th>
+                  <th scope="col" className="px-4 py-3 font-medium">마일리지</th>
+                  <th scope="col" className="px-4 py-3 font-medium">실제 결제액</th>
                 </tr>
               </thead>
               <tbody>
                 {statistics.map((item) => (
                   <tr key={item.label} className="border-t border-neutral-200">
-                    <td className="px-4 py-4 font-semibold">{item.label}</td>
+                    <th scope="row" className="px-4 py-4 font-semibold">{item.label}</th>
                     <td className="px-4 py-4">{item.orderCount.toLocaleString()}건</td>
                     <td className="px-4 py-4">{item.productSalesAmount.toLocaleString()}원</td>
                     <td className="px-4 py-4">{item.deliveryFeeAmount.toLocaleString()}원</td>

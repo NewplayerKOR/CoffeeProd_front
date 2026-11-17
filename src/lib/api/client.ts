@@ -72,10 +72,17 @@ export async function apiRequest<T>(
       throw error
     }
 
-    return requestOnce<T>(path, {
-      ...options,
-      retryOnUnauthorized: false,
-    })
+    try {
+      return await requestOnce<T>(path, {
+        ...options,
+        retryOnUnauthorized: false,
+      })
+    } catch (retryError) {
+      if (retryError instanceof ApiError && retryError.kind === "UNAUTHORIZED") {
+        notifyAuthExpired()
+      }
+      throw retryError
+    }
   }
 }
 
@@ -167,9 +174,12 @@ async function reissueAuthTokens() {
 
     setStoredAuthTokens(tokens)
     return true
-  } catch {
-    clearStoredAuthTokens()
-    return false
+  } catch (error) {
+    if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
+      clearStoredAuthTokens()
+      return false
+    }
+    throw error
   }
 }
 

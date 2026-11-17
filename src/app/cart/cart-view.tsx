@@ -213,6 +213,7 @@ export function CartView() {
 
               {currentCart.items.map((item) => {
                 const isPending = pendingItemId === item.cartItemId
+                const itemLabel = `${item.productName} (${grindOptions.find((option) => option.value === item.grindType)?.label ?? item.grindType})`
 
                 return (
                   <article
@@ -251,6 +252,8 @@ export function CartView() {
                           variant="ghost"
                           size="sm"
                           disabled={isPending}
+                          aria-label={`${itemLabel} 삭제`}
+                          aria-busy={isPending}
                           onClick={() => handleDeleteItem(item.cartItemId)}
                         >
                           <Trash2 data-icon="inline-start" />
@@ -264,7 +267,7 @@ export function CartView() {
                             className="text-sm font-semibold"
                             htmlFor={`grindType-${item.cartItemId}`}
                           >
-                            분쇄 옵션
+                            <span className="sr-only">{item.productName} </span>분쇄 옵션
                           </label>
                           <select
                             id={`grindType-${item.cartItemId}`}
@@ -288,6 +291,7 @@ export function CartView() {
 
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-semibold">수량</span>
+                          {isPending && <span role="status" className="text-xs text-muted-foreground">변경 중</span>}
                           <div className="flex w-fit items-center rounded-lg border border-neutral-300 bg-white">
                             <Button
                               type="button"
@@ -297,7 +301,7 @@ export function CartView() {
                               onClick={() =>
                                 handleUpdateItem(item, item.quantity - 1)
                               }
-                              aria-label="수량 감소"
+                              aria-label={`${itemLabel} 수량 감소`}
                             >
                               <Minus />
                             </Button>
@@ -312,7 +316,7 @@ export function CartView() {
                               onClick={() =>
                                 handleUpdateItem(item, item.quantity + 1)
                               }
-                              aria-label="수량 증가"
+                              aria-label={`${itemLabel} 수량 증가`}
                             >
                               <Plus />
                             </Button>

@@ -1,6 +1,9 @@
+import type { Metadata } from "next"
 import { AdminAuthGuard } from "../admin-auth-guard"
 import { AdminPageShell } from "../admin-page-shell"
 import { QnasAdminView } from "./qnas-admin-view"
+
+export const metadata: Metadata = { title: "상품 문의 관리" }
 
 export default function AdminQnasPage() {
   return (

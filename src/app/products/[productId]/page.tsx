@@ -1,3 +1,5 @@
+import type { Metadata } from "next"
+import { cache } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -25,6 +27,7 @@ import {
 import { cn } from "@/lib/utils"
 
 import { ProductImage } from "../product-image"
+import { ProductDetailPanels } from "./product-detail-panels"
 import { ProductPurchaseForm } from "./product-purchase-form"
 
 const detailTabs = [
@@ -57,6 +60,16 @@ type ProductLoadState =
       errorMessage: string
       notFound: boolean
     }
+
+export async function generateMetadata({ params, searchParams }: ProductDetailPageProps): Promise<Metadata> {
+  const { productId } = await params
+  const { tab } = await searchParams
+  const state = await loadProduct(productId)
+  const label = detailTabs.find((item) => item.id === parseDetailTab(firstParam(tab)))!.label
+  return { title: state.product
+    ? `${state.product.name} · ${label}`
+    : state.notFound ? "상품을 찾을 수 없습니다" : "상품 정보 조회 오류" }
+}
 
 export default async function ProductDetailPage({
   params,
@@ -165,32 +178,9 @@ export default async function ProductDetailPage({
         </div>
       </section>
 
-      <section className="mt-10 rounded-lg border border-neutral-200 bg-white shadow-sm">
-        <nav className="flex flex-wrap gap-2 border-b border-neutral-200 p-4">
-          {detailTabs.map((item) => {
-            const isActive = selectedTab === item.id
-            const href =
-              item.id === "detail"
-                ? `/products/${product.id}`
-                : `/products/${product.id}?tab=${item.id}`
-
-            return (
-              <Button
-                key={item.id}
-                variant={isActive ? "default" : "ghost"}
-                size="sm"
-                asChild
-              >
-                <Link href={href}>{item.label}</Link>
-              </Button>
-            )
-          })}
-        </nav>
-
-        <div className="p-6">
-          <ProductDetailTab product={product} selectedTab={selectedTab} />
-        </div>
-      </section>
+      <ProductDetailPanels productId={product.id} selectedTab={selectedTab} items={detailTabs}>
+        <ProductDetailTab product={product} selectedTab={selectedTab} />
+      </ProductDetailPanels>
     </ProductDetailShell>
   )
 }
@@ -352,7 +342,7 @@ function ProductSpec({ label, value }: { label: string; value: string }) {
   )
 }
 
-async function loadProduct(productId: string): Promise<ProductLoadState> {
+const loadProduct = cache(async (productId: string): Promise<ProductLoadState> => {
   try {
     return {
       product: await getProduct(productId, {
@@ -382,7 +372,7 @@ async function loadProduct(productId: string): Promise<ProductLoadState> {
       notFound: false,
     }
   }
-}
+})
 
 function parseDetailTab(value: string | undefined): DetailTabId {
   return detailTabs.some((item) => item.id === value)

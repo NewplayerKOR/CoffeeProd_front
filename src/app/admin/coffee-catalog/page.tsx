@@ -1,6 +1,9 @@
+import type { Metadata } from "next"
 import { AdminAuthGuard } from "../admin-auth-guard"
 import { AdminPageShell } from "../admin-page-shell"
 import { CoffeeCatalogAdminView } from "./coffee-catalog-admin-view"
+
+export const metadata: Metadata = { title: "커피 카탈로그 관리" }
 
 export default function AdminCoffeeCatalogPage() {
   return (

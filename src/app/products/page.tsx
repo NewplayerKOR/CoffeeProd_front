@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -74,6 +75,8 @@ type ProductListState = {
   processingMethodsError: string | null
   productsError: string | null
 }
+
+export const metadata: Metadata = { title: "상품 목록" }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const rawSearchParams = await searchParams
@@ -463,6 +466,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   asChild
                 >
                   <Link
+                    aria-label={`${pageNumber + 1}페이지`}
+                    aria-current={pageNumber === filters.page ? "page" : undefined}
                     href={`${buildProductsHref(filters.urlParams, {
                       page: String(pageNumber),
                     })}#catalog-results`}
