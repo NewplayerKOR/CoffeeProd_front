@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react"
-import { type ChangeEvent, type FormEvent, useEffect, useState } from "react"
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,15 +19,16 @@ import {
   deleteAdminProduct,
   getAdminProducts,
   updateAdminProductStatus,
+  type AdminProductListItem,
 } from "@/lib/api/admin"
-import { type ProductListItem, type ProductStatus } from "@/lib/api/catalog"
+import { type ProductStatus } from "@/lib/api/catalog"
 import { ApiError, type PageResponse } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 type PendingAction = {
   productId: number
   type: "status" | "stock" | "delete"
-} | null
+}
 
 const pageSize = 10
 const defaultSort = "createdAt,desc"
@@ -44,7 +45,8 @@ const inputClassName =
 export function ProductsAdminView() {
   const [page, setPage] = useState(0)
   const [statusFilter, setStatusFilter] = useState<ProductStatus | "ALL">("ALL")
-  const [products, setProducts] = useState<PageResponse<ProductListItem> | null>(
+  const [refreshCount, setRefreshCount] = useState(0)
+  const [products, setProducts] = useState<PageResponse<AdminProductListItem> | null>(
     null
   )
   const [statusDrafts, setStatusDrafts] = useState<Record<number, ProductStatus>>(
@@ -56,15 +58,14 @@ export function ProductsAdminView() {
     "success"
   )
   const [isLoading, setIsLoading] = useState(true)
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const actionInProgress = useRef(false)
+  const controlsDisabled = isLoading || pendingAction !== null
 
   useEffect(() => {
     let isActive = true
 
     async function loadProducts() {
-      setIsLoading(true)
-      setMessage(null)
-
       try {
         const nextProducts = await getAdminProducts({
           page,
@@ -104,11 +105,39 @@ export function ProductsAdminView() {
     return () => {
       isActive = false
     }
-  }, [page, statusFilter])
+  }, [page, refreshCount, statusFilter])
 
   function handleStatusFilterChange(event: ChangeEvent<HTMLSelectElement>) {
-    setStatusFilter(event.currentTarget.value as ProductStatus | "ALL")
+    const nextStatus = event.currentTarget.value as ProductStatus | "ALL"
+    if (controlsDisabled || actionInProgress.current || nextStatus === statusFilter) return
+
+    setIsLoading(true)
+    setMessage(null)
+    setProducts(null)
+    setStatusFilter(nextStatus)
     setPage(0)
+  }
+
+  function refreshProducts() {
+    if (controlsDisabled || actionInProgress.current) return
+
+    setIsLoading(true)
+    setMessage(null)
+    setRefreshCount((current) => current + 1)
+  }
+
+  function beginAction(action: PendingAction) {
+    if (isLoading || actionInProgress.current) return false
+
+    actionInProgress.current = true
+    setPendingAction(action)
+    setMessage(null)
+    return true
+  }
+
+  function finishAction() {
+    actionInProgress.current = false
+    setPendingAction(null)
   }
 
   function handleStatusChange(
@@ -137,7 +166,9 @@ export function ProductsAdminView() {
     setMessage(null)
   }
 
-  async function handleStatusSubmit(product: ProductListItem) {
+  async function handleStatusSubmit(product: AdminProductListItem) {
+    if (controlsDisabled || actionInProgress.current) return
+
     if (!(await confirmAction({
       title: `${product.name} 판매 상태 변경`,
       description: `${getStatusLabel(statusDrafts[product.id] ?? product.status)} 상태로 변경합니다. 고객에게 표시되는 상태가 바뀌며 복원하려면 다시 변경해야 합니다.`,
@@ -145,8 +176,7 @@ export function ProductsAdminView() {
     }))) return
     const status = statusDrafts[product.id] ?? product.status
 
-    setPendingAction({ productId: product.id, type: "status" })
-    setMessage(null)
+    if (!beginAction({ productId: product.id, type: "status" })) return
 
     try {
       await updateAdminProductStatus(product.id, { status })
@@ -166,15 +196,16 @@ export function ProductsAdminView() {
       setMessageTone("error")
       setMessage(getAdminErrorMessage(error))
     } finally {
-      setPendingAction(null)
+      finishAction()
     }
   }
 
   async function handleStockSubmit(
-    product: ProductListItem,
+    product: AdminProductListItem,
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault()
+    if (controlsDisabled || actionInProgress.current) return
 
     const quantity = Number(stockDrafts[product.id])
 
@@ -184,11 +215,20 @@ export function ProductsAdminView() {
       return
     }
 
-    setPendingAction({ productId: product.id, type: "stock" })
-    setMessage(null)
+    if (!beginAction({ productId: product.id, type: "stock" })) return
 
     try {
-      await addAdminProductStock(product.id, { quantity })
+      const updated = await addAdminProductStock(product.id, { quantity })
+      setProducts((current) =>
+        current
+          ? {
+              ...current,
+              content: current.content.map((item) =>
+                item.id === product.id ? { ...item, stockQuantity: updated.stockQuantity } : item
+              ),
+            }
+          : current
+      )
       setStockDrafts((current) => ({
         ...current,
         [product.id]: "",
@@ -197,20 +237,25 @@ export function ProductsAdminView() {
       setMessage("상품 재고를 추가했습니다.")
     } catch (error) {
       setMessageTone("error")
-      setMessage(getAdminErrorMessage(error))
+      setMessage(
+        error instanceof ApiError && (error.kind === "NETWORK_ERROR" || error.httpStatus >= 500)
+          ? "재고 추가 결과를 확인하지 못했습니다. 다시 추가하기 전에 새로고침으로 현재 재고를 확인해 주세요."
+          : getAdminErrorMessage(error)
+      )
     } finally {
-      setPendingAction(null)
+      finishAction()
     }
   }
 
-  async function handleDeleteProduct(product: ProductListItem) {
+  async function handleDeleteProduct(product: AdminProductListItem) {
+    if (controlsDisabled || actionInProgress.current) return
+
     if (!(await confirmAction({
       title: `${product.name} 상품 삭제`,
       description: "판매 목록에서 제외되며 이 화면에서 복구할 수 없습니다.",
       confirmLabel: "상품 삭제",
     }))) return
-    setPendingAction({ productId: product.id, type: "delete" })
-    setMessage(null)
+    if (!beginAction({ productId: product.id, type: "delete" })) return
 
     try {
       await deleteAdminProduct(product.id)
@@ -239,12 +284,17 @@ export function ProductsAdminView() {
       setMessageTone("error")
       setMessage(getAdminErrorMessage(error))
     } finally {
-      setPendingAction(null)
+      finishAction()
     }
   }
 
   function movePage(nextPage: number) {
-    setPage(Math.max(nextPage, 0))
+    if (controlsDisabled || actionInProgress.current || nextPage < 0 || nextPage === page) return
+
+    setIsLoading(true)
+    setMessage(null)
+    setProducts(null)
+    setPage(nextPage)
   }
 
   return (
@@ -257,7 +307,7 @@ export function ProductsAdminView() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={statusFilter}
-            disabled={isLoading}
+            disabled={controlsDisabled}
             className={inputClassName}
             aria-label="상품 상태 필터"
             onChange={handleStatusFilterChange}
@@ -273,8 +323,8 @@ export function ProductsAdminView() {
             type="button"
             variant="outline"
             size="sm"
-            disabled={isLoading}
-            onClick={() => movePage(page)}
+            disabled={controlsDisabled}
+            onClick={refreshProducts}
           >
             <RefreshCw data-icon="inline-start" />
             새로고침
@@ -301,7 +351,7 @@ export function ProductsAdminView() {
       )}
 
       {isLoading && (
-        <p className="mt-5 text-sm text-neutral-600">
+        <p className="mt-5 text-sm text-neutral-600" role="status">
           상품 목록을 불러오고 있습니다.
         </p>
       )}
@@ -312,7 +362,7 @@ export function ProductsAdminView() {
         </p>
       )}
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div aria-busy={isLoading} className="mt-5 flex flex-col gap-3">
         {products?.content.map((product) => {
           const isStatusPending =
             pendingAction?.productId === product.id &&
@@ -323,8 +373,7 @@ export function ProductsAdminView() {
           const isDeletePending =
             pendingAction?.productId === product.id &&
             pendingAction.type === "delete"
-          const hasPendingAction =
-            isStatusPending || isStockPending || isDeletePending
+          const hasKnownStock = Number.isInteger(product.stockQuantity) && product.stockQuantity >= 0
 
           return (
             <article
@@ -341,13 +390,18 @@ export function ProductsAdminView() {
                     ID {product.id} · {product.categoryName} ·{" "}
                     {product.price.toLocaleString()}원
                   </p>
+                  <p className="mt-2 text-sm font-semibold">
+                    {hasKnownStock
+                      ? `현재 재고 ${product.stockQuantity.toLocaleString()}개`
+                      : "재고 확인 불가"}
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-3 lg:w-[560px]">
                   <div className="flex flex-col gap-2 md:flex-row">
                     <select
                       value={statusDrafts[product.id] ?? product.status}
-                      disabled={hasPendingAction}
+                      disabled={controlsDisabled}
                       className={inputClassName}
                       aria-label={`${product.name} 판매 상태`}
                       onChange={(event) => handleStatusChange(product.id, event)}
@@ -361,7 +415,7 @@ export function ProductsAdminView() {
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={hasPendingAction}
+                      disabled={controlsDisabled}
                       aria-label={`${product.name} 상태 변경${isStatusPending ? " 중" : ""}`}
                       aria-busy={isStatusPending}
                       onClick={() => handleStatusSubmit(product)}
@@ -378,7 +432,7 @@ export function ProductsAdminView() {
                     <Button
                       type="button"
                       variant="destructive"
-                      disabled={hasPendingAction || product.status === "HIDDEN"}
+                      disabled={controlsDisabled || product.status === "HIDDEN"}
                       aria-label={`${product.name} 삭제 처리${isDeletePending ? " 중" : ""}`}
                       aria-busy={isDeletePending}
                       onClick={() => handleDeleteProduct(product)}
@@ -396,7 +450,7 @@ export function ProductsAdminView() {
                       type="number"
                       min={1}
                       value={stockDrafts[product.id] ?? ""}
-                      disabled={hasPendingAction}
+                      disabled={controlsDisabled}
                       className={inputClassName}
                       placeholder="추가 재고 수량"
                       aria-label={`${product.name} 추가 재고 수량`}
@@ -406,7 +460,7 @@ export function ProductsAdminView() {
                       type="submit"
                       aria-label={`${product.name} ${isStockPending ? "재고 추가 중" : "재고 추가"}`}
                       aria-busy={isStockPending}
-                      disabled={hasPendingAction}
+                      disabled={controlsDisabled}
                     >
                       <PackagePlus data-icon="inline-start" />
                       {isStockPending ? "추가 중" : "재고 추가"}
@@ -427,7 +481,7 @@ export function ProductsAdminView() {
           <Button
             type="button"
             variant="outline"
-            disabled={products.first}
+            disabled={controlsDisabled || products.first}
             onClick={() => movePage(page - 1)}
           >
             <ArrowLeft data-icon="inline-start" />
@@ -439,7 +493,7 @@ export function ProductsAdminView() {
           <Button
             type="button"
             variant="outline"
-            disabled={products.last}
+            disabled={controlsDisabled || products.last}
             onClick={() => movePage(page + 1)}
           >
             다음

@@ -35,6 +35,10 @@ export type AdminProductStockRequest = {
   quantity: number
 }
 
+export type AdminProductListItem = ProductListItem & {
+  stockQuantity: number
+}
+
 export type AdminProductListParams = {
   categoryId?: number
   roastLevel?: RoastLevel
@@ -180,7 +184,8 @@ export function createAdminProduct(payload: AdminProductRequest) {
 }
 
 export function getAdminProducts(params: AdminProductListParams = {}) {
-  return apiRequest<PageResponse<ProductListItem>>("/api/v1/admin/products", {
+  return apiRequest<PageResponse<AdminProductListItem>>("/api/v1/admin/products", {
+    cache: "no-store",
     query: params as QueryParams,
   })
 }
