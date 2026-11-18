@@ -410,7 +410,7 @@ export function CoffeeCatalogAdminView() {
               </div>
             </div>
           ) : (
-            <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+            <section className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
               <form
                 className="h-fit rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
                 noValidate
@@ -546,7 +546,7 @@ export function CoffeeCatalogAdminView() {
                       key={reference.id}
                       className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 break-words">
                         <p className="font-semibold">{reference.name}</p>
                         <p className="mt-1 text-xs text-neutral-500">
                           {reference.code} · ID {reference.id}
