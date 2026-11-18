@@ -26,6 +26,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import { LoadError } from "@/components/load-error"
 import { Button } from "@/components/ui/button"
+import { sameFormValues, useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import {
   createAddress,
   deleteAddress,
@@ -96,6 +97,7 @@ export function AddressManager() {
   const [retryCount, setRetryCount] = useState(0)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [formData, setFormData] = useState<AddressFormData>(emptyFormData)
+  const [savedFormData, setSavedFormData] = useState<AddressFormData>(emptyFormData)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null)
   const [pendingAddressId, setPendingAddressId] = useState<number | null>(null)
@@ -103,6 +105,9 @@ export function AddressManager() {
   const [message, setMessage] = useState<string | null>(null)
   const [messageTone, setMessageTone] = useState<"success" | "error">("success")
   const [isPostcodeReady, setIsPostcodeReady] = useState(false)
+  const editorVersion = useRef(0)
+  const busy = isSubmitting || pendingAddressId !== null
+  const guard = useUnsavedChanges("address", "배송지 정보", !sameFormValues(formData, savedFormData), busy)
 
   const editingAddress = useMemo(
     () => addresses.find((address) => address.id === editingAddressId) ?? null,
@@ -148,6 +153,7 @@ export function AddressManager() {
     void load()
     return () => {
       isActive = false
+      editorVersion.current += 1
       window.removeEventListener(AUTH_TOKENS_CHANGED_EVENT, checkTokens)
     }
   }, [retryCount])
@@ -171,37 +177,48 @@ export function AddressManager() {
   }
 
   async function startEdit(address: Address) {
+    if (editingAddressId === address.id || !(await guard.confirmDiscard())) return
+    const version = ++editorVersion.current
     setPendingAddressId(address.id)
     setFieldErrors({})
     setMessage(null)
 
     try {
       const latestAddress = await getAddress(address.id)
+      if (version !== editorVersion.current) return
 
       setEditingAddressId(latestAddress.id)
-      setFormData({
+      const data = {
         recipient: latestAddress.recipient,
         phone: latestAddress.phone,
         zipcode: latestAddress.zipcode,
         addressLine1: latestAddress.addressLine1,
         addressLine2: latestAddress.addressLine2,
-      })
+      }
+      setFormData(data)
+      setSavedFormData(data)
     } catch (error) {
-      setMessageTone("error")
-      setMessage(getAddressErrorMessage(error))
+      if (version === editorVersion.current) {
+        setMessageTone("error")
+        setMessage(getAddressErrorMessage(error))
+      }
     } finally {
-      setPendingAddressId(null)
+      if (version === editorVersion.current) setPendingAddressId(null)
     }
   }
 
   function resetForm() {
+    editorVersion.current += 1
     setEditingAddressId(null)
     setFormData(emptyFormData)
+    setSavedFormData(emptyFormData)
     setFieldErrors({})
     setMessage(null)
   }
 
   function handleAddressSearch() {
+    if (busy) return
+    const version = editorVersion.current
     if (!window.daum?.Postcode) {
       setMessageTone("error")
       setMessage("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.")
@@ -210,6 +227,7 @@ export function AddressManager() {
 
     const postcode = new window.daum.Postcode({
       oncomplete(data) {
+        if (version !== editorVersion.current) return
         const baseAddress =
           data.userSelectedType === "R" ? data.roadAddress : data.jibunAddress
         const extraAddressParts = []
@@ -257,6 +275,7 @@ export function AddressManager() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy) return
     const form = event.currentTarget
 
     const payload = normalizeFormData(formData)
@@ -277,6 +296,7 @@ export function AddressManager() {
     }
 
     setIsSubmitting(true)
+    editorVersion.current += 1
     setFieldErrors({})
     setMessage(null)
 
@@ -293,6 +313,7 @@ export function AddressManager() {
 
       setMessageTone("success")
       setFormData(emptyFormData)
+      setSavedFormData(emptyFormData)
       setEditingAddressId(null)
     } catch (error) {
       if (error instanceof ApiError && error.errors?.length) {
@@ -310,6 +331,7 @@ export function AddressManager() {
   }
 
   async function handleSetDefault(addressId: number) {
+    if (busy) return
     setPendingAddressId(addressId)
     setMessage(null)
 
@@ -327,9 +349,10 @@ export function AddressManager() {
   }
 
   async function handleDelete(addressId: number) {
+    if (busy) return
     if (!(await confirmAction({
       title: `${addresses.find((address) => address.id === addressId)?.recipient ?? "선택한 수령인"} 님 배송지 삭제`,
-      description: `${addresses.find((address) => address.id === addressId)?.addressLine1 ?? "선택한 주소"} 배송지를 삭제합니다. 삭제한 배송지는 복구되지 않으며 다시 등록해야 합니다.`,
+      description: `${addresses.find((address) => address.id === addressId)?.addressLine1 ?? "선택한 주소"} 배송지를 삭제합니다. 삭제한 배송지는 복구되지 않으며 다시 등록해야 합니다.${editingAddressId === addressId ? " 현재 편집 중인 내용도 함께 버립니다." : ""}`,
       confirmLabel: "배송지 삭제",
     }))) return
     setPendingAddressId(addressId)
@@ -432,8 +455,6 @@ export function AddressManager() {
               )}
 
               {addresses.map((address) => {
-                const isPending = pendingAddressId === address.id
-
                 return (
                   <article
                     key={address.id}
@@ -476,7 +497,7 @@ export function AddressManager() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={isPending}
+                            disabled={busy}
                             aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 기본 설정`}
                             onClick={() => handleSetDefault(address.id)}
                           >
@@ -488,7 +509,7 @@ export function AddressManager() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          disabled={isPending}
+                          disabled={busy}
                           aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 수정`}
                           onClick={() => void startEdit(address)}
                         >
@@ -499,7 +520,7 @@ export function AddressManager() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          disabled={isPending}
+                          disabled={busy}
                           aria-label={`${address.recipient} ${address.addressLine1} ${address.addressLine2 ?? ""} 배송지 삭제`}
                           onClick={() => handleDelete(address.id)}
                         >
@@ -528,7 +549,8 @@ export function AddressManager() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={resetForm}
+                    disabled={busy}
+                    onClick={async () => { if (await guard.confirmDiscard()) resetForm() }}
                   >
                     취소
                   </Button>
@@ -548,7 +570,7 @@ export function AddressManager() {
                   value={formData.recipient}
                   placeholder="홍길동"
                   error={fieldErrors.recipient}
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   onChange={handleInputChange}
                 />
                 <AddressInput
@@ -557,7 +579,7 @@ export function AddressManager() {
                   value={formData.phone}
                   placeholder="010-1234-5678"
                   error={fieldErrors.phone}
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   onChange={handleInputChange}
                 />
                 <AddressInput
@@ -566,7 +588,7 @@ export function AddressManager() {
                   value={formData.zipcode}
                   placeholder="주소 검색으로 입력"
                   error={fieldErrors.zipcode}
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   readOnly
                   onClick={handleAddressSearch}
                   onChange={handleInputChange}
@@ -575,7 +597,7 @@ export function AddressManager() {
                       type="button"
                       variant="outline"
                       className="h-10"
-                      disabled={!canAddAddress || isSubmitting || !isPostcodeReady}
+                      disabled={!canAddAddress || busy || !isPostcodeReady}
                       onClick={handleAddressSearch}
                     >
                       <Search data-icon="inline-start" />
@@ -589,7 +611,7 @@ export function AddressManager() {
                   value={formData.addressLine1}
                   placeholder="주소 검색 결과"
                   error={fieldErrors.addressLine1}
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   readOnly
                   onClick={handleAddressSearch}
                   onChange={handleInputChange}
@@ -600,14 +622,14 @@ export function AddressManager() {
                   value={formData.addressLine2}
                   placeholder="101동 1001호"
                   error={fieldErrors.addressLine2}
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   inputRef={detailAddressRef}
                   onChange={handleInputChange}
                 />
 
                 <Button
                   type="submit"
-                  disabled={!canAddAddress || isSubmitting}
+                  disabled={!canAddAddress || busy}
                   className="w-full"
                 >
                   <Plus data-icon="inline-start" />

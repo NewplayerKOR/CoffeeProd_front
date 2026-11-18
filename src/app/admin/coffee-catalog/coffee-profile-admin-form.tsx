@@ -6,6 +6,7 @@ import { type FormEvent, type ReactNode, useState } from "react"
 import { useFormErrorFocus, getNumberInputErrors } from "@/lib/form-feedback"
 import { ApiError, validationErrorsToFieldMap } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
+import { sameFormValues, useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import type {
   BeanType,
   CoffeeProfile,
@@ -80,6 +81,7 @@ export function CoffeeProfileAdminForm({
   varieties,
   onSave,
   onCancel,
+  disabled = false,
 }: {
   profile: CoffeeProfile | null
   processingMethods: CoffeeReference[]
@@ -88,14 +90,22 @@ export function CoffeeProfileAdminForm({
   varieties: CoffeeReference[]
   onSave: (payload: CoffeeProfileRequest) => Promise<void>
   onCancel: () => void
+  disabled?: boolean
 }) {
   const focusFormError = useFormErrorFocus()
-  const [form, setForm] = useState<ProfileFormState>(() =>
+  const [initialForm] = useState<ProfileFormState>(() =>
     profile ? toFormState(profile) : emptyForm
   )
+  const [form, setForm] = useState<ProfileFormState>(initialForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const isSubmitting = isSaving || disabled
+  const guard = useUnsavedChanges("coffee-catalog", "커피 프로필", !sameFormValues(form, initialForm), isSubmitting)
+
+  async function cancel() {
+    if (await guard.confirmDiscard()) onCancel()
+  }
 
   function updateField<Key extends keyof ProfileFormState>(
     field: Key,
@@ -108,6 +118,7 @@ export function CoffeeProfileAdminForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
     const formElement = event.currentTarget
     const nextErrors = {
       ...getNumberInputErrors(event.currentTarget),
@@ -120,17 +131,18 @@ export function CoffeeProfileAdminForm({
       return
     }
 
-    setIsSubmitting(true)
+    setIsSaving(true)
     setMessage(null)
 
     try {
       await onSave(toRequest(form))
+      guard.markSaved()
     } catch (error) {
       if (error instanceof ApiError) setErrors(validationErrorsToFieldMap(error.errors))
       focusFormError(formElement)
       setMessage(error instanceof Error ? error.message : "프로필 저장에 실패했습니다.")
     } finally {
-      setIsSubmitting(false)
+      setIsSaving(false)
     }
   }
 
@@ -191,7 +203,7 @@ export function CoffeeProfileAdminForm({
             배열의 선택 순서가 향미·추출법·품종 노출 순서로 저장됩니다.
           </p>
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onCancel}>
+        <Button type="button" variant="ghost" size="icon" disabled={isSubmitting} onClick={() => void cancel()}>
           <X />
           <span className="sr-only">닫기</span>
         </Button>
@@ -534,7 +546,7 @@ export function CoffeeProfileAdminForm({
           <Check data-icon="inline-start" />
           {isSubmitting ? "저장 중" : profile ? "수정 저장" : "프로필 등록"}
         </Button>
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+        <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => void cancel()}>
           취소
         </Button>
       </div>

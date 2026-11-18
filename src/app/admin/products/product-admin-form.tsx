@@ -13,6 +13,7 @@ import {
 } from "react"
 
 import { Button } from "@/components/ui/button"
+import { sameFormValues, useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import {
   createAdminProduct,
   getAdminProduct,
@@ -90,6 +91,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [coffeeProfiles, setCoffeeProfiles] = useState<CoffeeProfile[]>([])
   const [form, setForm] = useState<ProductFormState>(initialFormState)
+  const [savedForm, setSavedForm] = useState<ProductFormState>(initialFormState)
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [message, setMessage] = useState<string | null>(null)
   const [messageTone, setMessageTone] = useState<"success" | "error">(
@@ -97,6 +99,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
   )
   const [isLoading, setIsLoading] = useState(mode === "edit")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const guard = useUnsavedChanges("product", "상품 편집", !sameFormValues(form, savedForm), isSubmitting || isLoading)
 
   const title = useMemo(
     () => (mode === "create" ? "상품 등록" : "상품 수정"),
@@ -128,6 +131,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
 
         if (product) {
           setForm(toFormState(product))
+          setSavedForm(toFormState(product))
         }
       } catch (error) {
         if (isActive) {
@@ -167,6 +171,7 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting || isLoading) return
 
     const nextErrors = {
       ...getNumberInputErrors(event.currentTarget),
@@ -190,10 +195,14 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
     try {
       if (mode === "edit" && productId) {
         await updateAdminProduct(productId, payload)
+        setSavedForm(form)
+        guard.markSaved()
         setMessageTone("success")
         setMessage("상품 정보를 수정했습니다.")
       } else {
         await createAdminProduct(payload)
+        setSavedForm(form)
+        guard.markSaved()
         router.replace("/admin/products")
       }
     } catch (error) {
@@ -209,7 +218,8 @@ export function ProductAdminForm({ mode, productId }: ProductAdminFormProps) {
     }
   }
 
-  function resetForm() {
+  async function resetForm() {
+    if (!(await guard.confirmDiscard())) return
     setForm(initialFormState)
     setErrors({})
     setMessage(null)

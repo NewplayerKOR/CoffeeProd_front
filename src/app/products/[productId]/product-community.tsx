@@ -12,6 +12,7 @@ import {
 
 import { LoadError } from "@/components/load-error"
 import { useSessionState } from "@/components/session-state-provider"
+import { sameFormValues, useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import { useRemoteQuery } from "@/lib/use-remote-query"
 import { Button } from "@/components/ui/button"
 import {
@@ -47,6 +48,15 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [savedDraft, setSavedDraft] = useState({ rating: 5, content: "" })
+  const guard = useUnsavedChanges(`review:${productId}`, "구매 후기", !sameFormValues({ rating, content }, savedDraft), isSubmitting)
+
+  function resetReviewForm() {
+    setEditingId(null)
+    setRating(5)
+    setContent("")
+    setSavedDraft({ rating: 5, content: "" })
+  }
 
   const query = useRemoteQuery(
     `reviews:${productId}:${page}`,
@@ -58,6 +68,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
 
     if (!nickname) {
       setMessage("로그인 후 리뷰를 작성할 수 있습니다.")
@@ -83,9 +94,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
         setMessage("리뷰를 등록했습니다.")
       }
 
-      setEditingId(null)
-      setRating(5)
-      setContent("")
+      resetReviewForm()
       loadReviews()
     } catch (error) {
       setMessage(getCommunityErrorMessage(error, "리뷰 요청을 처리하지 못했습니다."))
@@ -95,9 +104,10 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(reviewId: number) {
+    if (isSubmitting) return
     if (!(await confirmAction({
       title: "리뷰 삭제",
-      description: `“${reviews?.content.find((review) => review.id === reviewId)?.content.slice(0, 60) ?? "선택한 리뷰"}” 리뷰를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.`,
+      description: `“${reviews?.content.find((review) => review.id === reviewId)?.content.slice(0, 60) ?? "선택한 리뷰"}” 리뷰를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.${editingId === reviewId ? " 현재 편집 중인 내용도 함께 버립니다." : ""}`,
       confirmLabel: "리뷰 삭제",
     }))) return
     setIsSubmitting(true)
@@ -105,8 +115,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
 
     try {
       await deleteReview(reviewId)
-      setEditingId(null)
-      setContent("")
+      if (editingId === reviewId) resetReviewForm()
       setMessage("리뷰를 삭제했습니다.")
       loadReviews()
     } catch (error) {
@@ -180,11 +189,8 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setEditingId(null)
-                  setRating(5)
-                  setContent("")
-                }}
+                disabled={isSubmitting}
+                onClick={async () => { if (await guard.confirmDiscard()) resetReviewForm() }}
               >
                 취소
               </Button>
@@ -234,10 +240,13 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
                           variant="ghost"
                           size="icon-sm"
                           aria-label="리뷰 수정"
-                          onClick={() => {
+                          disabled={isSubmitting}
+                          onClick={async () => {
+                            if (editingId === review.id || !(await guard.confirmDiscard())) return
                             setEditingId(review.id)
                             setRating(review.rating)
                             setContent(review.content)
+                            setSavedDraft({ rating: review.rating, content: review.content })
                           }}
                         >
                           <Pencil />
@@ -270,6 +279,7 @@ export function ProductReviews({ productId }: ProductCommunityProps) {
         totalPages={reviews?.totalPages ?? query.previousData?.totalPages ?? 0}
         isLoading={isLoading}
         failed={Boolean(loadError)}
+        disabled={isSubmitting}
         onPageChange={setPage}
       />
     </section>
@@ -285,6 +295,8 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [savedDraft, setSavedDraft] = useState({ title: "", question: "" })
+  const guard = useUnsavedChanges(`qna:${productId}`, "상품 문의", !sameFormValues({ title, question }, savedDraft), isSubmitting)
 
   const query = useRemoteQuery(
     `qnas:${productId}:${page}`,
@@ -294,6 +306,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
 
     if (!nickname) {
       setMessage("로그인 후 상품 문의를 작성할 수 있습니다.")
@@ -329,9 +342,10 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
   }
 
   async function handleDelete(qnaId: number) {
+    if (isSubmitting) return
     if (!(await confirmAction({
       title: "상품 문의 삭제",
-      description: `“${qnas?.content.find((qna) => qna.id === qnaId)?.title ?? "선택한 문의"}” 문의를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.`,
+      description: `“${qnas?.content.find((qna) => qna.id === qnaId)?.title ?? "선택한 문의"}” 문의를 삭제합니다. 삭제한 내용은 복구할 수 없습니다.${editingId === qnaId ? " 현재 편집 중인 내용도 함께 버립니다." : ""}`,
       confirmLabel: "상품 문의 삭제",
     }))) return
     setIsSubmitting(true)
@@ -339,7 +353,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
 
     try {
       await deleteQna(qnaId)
-      resetQnaForm()
+      if (editingId === qnaId) resetQnaForm()
       setMessage("상품 문의를 삭제했습니다.")
       loadQnas()
     } catch (error) {
@@ -353,6 +367,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
     setEditingId(null)
     setTitle("")
     setQuestion("")
+    setSavedDraft({ title: "", question: "" })
   }
 
   return (
@@ -407,7 +422,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
               {isSubmitting ? "저장 중" : editingId ? "수정 완료" : "문의 등록"}
             </Button>
             {editingId && (
-              <Button type="button" variant="outline" onClick={resetQnaForm}>취소</Button>
+              <Button type="button" variant="outline" disabled={isSubmitting} onClick={async () => { if (await guard.confirmDiscard()) resetQnaForm() }}>취소</Button>
             )}
           </div>
         </form>
@@ -452,10 +467,13 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
                         variant="ghost"
                         size="icon-sm"
                         aria-label="문의 수정"
-                        onClick={() => {
+                        disabled={isSubmitting}
+                        onClick={async () => {
+                          if (editingId === qna.id || !(await guard.confirmDiscard())) return
                           setEditingId(qna.id)
                           setTitle(qna.title)
                           setQuestion(qna.question)
+                          setSavedDraft({ title: qna.title, question: qna.question })
                         }}
                       >
                         <Pencil />
@@ -492,7 +510,7 @@ export function ProductQnas({ productId }: ProductCommunityProps) {
         )}
       </div>
 
-      <Pagination page={page} totalPages={qnas?.totalPages ?? query.previousData?.totalPages ?? 0} isLoading={isLoading} failed={Boolean(loadError)} onPageChange={setPage} />
+      <Pagination page={page} totalPages={qnas?.totalPages ?? query.previousData?.totalPages ?? 0} isLoading={isLoading} failed={Boolean(loadError)} disabled={isSubmitting} onPageChange={setPage} />
     </section>
   )
 }
@@ -503,11 +521,13 @@ function Pagination({
   onPageChange,
   isLoading,
   failed,
+  disabled,
 }: {
   page: number
   totalPages: number
   isLoading: boolean
   failed: boolean
+  disabled: boolean
   onPageChange: (page: number) => void
 }) {
   if (totalPages <= 1) {
@@ -516,11 +536,11 @@ function Pagination({
 
   return (
     <div className="mt-6 flex items-center justify-center gap-3">
-      <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => onPageChange(page - 1)}>
+      <Button type="button" variant="outline" size="sm" disabled={disabled || page <= 0} onClick={() => onPageChange(page - 1)}>
         이전
       </Button>
       <span className="text-sm text-neutral-500">{isLoading ? "조회 중" : failed ? `${page + 1}페이지 조회 실패` : `${page + 1} / ${totalPages}`}</span>
-      <Button type="button" variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => onPageChange(page + 1)}>
+      <Button type="button" variant="outline" size="sm" disabled={disabled || page + 1 >= totalPages} onClick={() => onPageChange(page + 1)}>
         다음
       </Button>
     </div>

@@ -6,6 +6,7 @@ import { Minus, Plus, ShoppingCart } from "lucide-react"
 import { type FormEvent, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { useConfirmNavigation } from "@/components/unsaved-changes-provider"
 import {
   addCartItem,
   CART_CHANGED_EVENT,
@@ -35,6 +36,7 @@ export function ProductPurchaseForm({
   stockQuantity,
 }: ProductPurchaseFormProps) {
   const router = useRouter()
+  const confirmNavigation = useConfirmNavigation()
   const pathname = usePathname()
   const [grindType, setGrindType] = useState<GrindType>("WHOLE_BEAN")
   const [quantity, setQuantity] = useState(1)
@@ -61,7 +63,7 @@ export function ProductPurchaseForm({
     }
 
     if (!getStoredAuthTokens()) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
+      if (await confirmNavigation()) router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
       return
     }
 
@@ -82,7 +84,7 @@ export function ProductPurchaseForm({
       setMessage("장바구니에 상품을 담았습니다.")
     } catch (error) {
       if (error instanceof ApiError && error.kind === "UNAUTHORIZED") {
-        router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
+        if (await confirmNavigation()) router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
         return
       }
 

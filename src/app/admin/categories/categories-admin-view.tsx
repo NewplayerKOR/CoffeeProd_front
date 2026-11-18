@@ -2,9 +2,10 @@
 import { confirmAction } from "@/components/confirm-action"
 
 import { Check, FolderTree, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
-import { type ChangeEvent, type FormEvent, useEffect, useState } from "react"
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import {
   createAdminCategory,
   deleteAdminCategory,
@@ -25,6 +26,7 @@ export function AdminCategoriesView() {
   const [draftName, setDraftName] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState("")
+  const [savedEditingName, setSavedEditingName] = useState("")
   const [message, setMessage] = useState<string | null>(null)
   const [messageTone, setMessageTone] = useState<"success" | "error">(
     "success"
@@ -32,6 +34,10 @@ export function AdminCategoriesView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(null)
+  const editingRequest = useRef(0)
+  const busy = isSubmitting || pendingCategoryId !== null
+  useUnsavedChanges("category-create", "새 카테고리", draftName !== "", busy)
+  const editGuard = useUnsavedChanges("category-edit", "카테고리 수정", editingId !== null && editingName !== savedEditingName, busy)
 
   useEffect(() => {
     let isActive = true
@@ -62,6 +68,7 @@ export function AdminCategoriesView() {
 
     return () => {
       isActive = false
+      editingRequest.current += 1
     }
   }, [])
 
@@ -81,6 +88,7 @@ export function AdminCategoriesView() {
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy) return
     const form = event.currentTarget
 
     const name = draftName.trim()
@@ -115,6 +123,7 @@ export function AdminCategoriesView() {
 
   async function handleUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy) return
     const form = event.currentTarget
 
     if (editingId === null) {
@@ -156,6 +165,8 @@ export function AdminCategoriesView() {
   }
 
   async function startEditing(category: Category) {
+    if (editingId === category.id || !(await editGuard.confirmDiscard())) return
+    const request = ++editingRequest.current
     setFormErrors((current) => ({ ...current, edit: undefined }))
     setFormMessages((current) => ({ ...current, edit: undefined }))
     setPendingCategoryId(category.id)
@@ -163,21 +174,26 @@ export function AdminCategoriesView() {
 
     try {
       const latestCategory = await getCategory(category.id)
+      if (request !== editingRequest.current) return
 
       setEditingId(latestCategory.id)
       setEditingName(latestCategory.name)
+      setSavedEditingName(latestCategory.name)
     } catch (error) {
-      setMessageTone("error")
-      setMessage(getAdminErrorMessage(error))
+      if (request === editingRequest.current) {
+        setMessageTone("error")
+        setMessage(getAdminErrorMessage(error))
+      }
     } finally {
-      setPendingCategoryId(null)
+      if (request === editingRequest.current) setPendingCategoryId(null)
     }
   }
 
   async function handleDelete(category: Category) {
+    if (busy) return
     if (!(await confirmAction({
       title: `${category.name} 카테고리 삭제`,
-      description: `${category.name} 카테고리를 삭제하면 복구할 수 없습니다.`,
+      description: `${category.name} 카테고리를 삭제하면 복구할 수 없습니다.${editingId === category.id ? " 현재 편집 중인 내용도 함께 버립니다." : ""}`,
       confirmLabel: "카테고리 삭제",
     }))) return
     setPendingCategoryId(category.id)
@@ -204,10 +220,12 @@ export function AdminCategoriesView() {
   }
 
   function clearEditing() {
+    editingRequest.current += 1
     setFormErrors((current) => ({ ...current, edit: undefined }))
     setFormMessages((current) => ({ ...current, edit: undefined }))
     setEditingId(null)
     setEditingName("")
+    setSavedEditingName("")
   }
 
   return (
@@ -237,7 +255,7 @@ export function AdminCategoriesView() {
             aria-describedby={formErrors.create ? "category-name-error" : undefined}
             value={draftName}
             maxLength={50}
-            disabled={isSubmitting}
+            disabled={busy}
             className={`${inputClassName} mt-2`}
             placeholder="예: 싱글 오리진"
             onChange={handleDraftChange}
@@ -252,7 +270,7 @@ export function AdminCategoriesView() {
               {formMessages.create}
             </p>
           )}
-          <Button type="submit" disabled={isSubmitting} className="mt-4 w-full">
+          <Button type="submit" disabled={busy} className="mt-4 w-full">
             <Plus data-icon="inline-start" />
             {isSubmitting ? "처리 중" : "생성"}
           </Button>
@@ -283,7 +301,7 @@ export function AdminCategoriesView() {
               aria-describedby={formErrors.edit ? "editing-category-name-error" : undefined}
               value={editingName}
               maxLength={50}
-              disabled={isSubmitting}
+              disabled={busy}
               className={`${inputClassName} mt-2`}
               onChange={handleEditingChange}
             />
@@ -298,15 +316,15 @@ export function AdminCategoriesView() {
               </p>
             )}
             <div className="mt-4 flex gap-2">
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={busy}>
                 <Check data-icon="inline-start" />
                 저장
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSubmitting}
-                onClick={clearEditing}
+                disabled={busy}
+                onClick={async () => { if (await editGuard.confirmDiscard()) clearEditing() }}
               >
                 <RotateCcw data-icon="inline-start" />
                 취소
@@ -369,7 +387,7 @@ export function AdminCategoriesView() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={pendingCategoryId === category.id}
+                  disabled={busy}
                   aria-label={`${category.name} 카테고리 수정`}
                   onClick={() => void startEditing(category)}
                 >
@@ -380,7 +398,7 @@ export function AdminCategoriesView() {
                   type="button"
                   variant="destructive"
                   size="sm"
-                  disabled={pendingCategoryId === category.id}
+                  disabled={busy}
                   aria-label={`${category.name} 카테고리 삭제`}
                   onClick={() => void handleDelete(category)}
                 >

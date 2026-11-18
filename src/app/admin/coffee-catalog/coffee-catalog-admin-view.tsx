@@ -12,6 +12,7 @@ import { Tabs } from "radix-ui"
 import { type FormEvent, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { sameFormValues, useUnsavedChanges } from "@/components/unsaved-changes-provider"
 import {
   createAdminCoffeeProfile,
   createAdminCoffeeReference,
@@ -80,6 +81,7 @@ export function CoffeeCatalogAdminView() {
   } | null>(null)
   const [referenceDraft, setReferenceDraft] =
     useState<ReferenceDraft>(emptyReferenceDraft)
+  const [savedReference, setSavedReference] = useState<ReferenceDraft>(emptyReferenceDraft)
   const [editingReferenceId, setEditingReferenceId] = useState<number | null>(
     null
   )
@@ -90,6 +92,9 @@ export function CoffeeCatalogAdminView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingProfileId, setPendingProfileId] = useState<number | null>(null)
+  const profileRequest = useRef(0)
+  const busy = isSubmitting || pendingProfileId !== null
+  const guard = useUnsavedChanges("coffee-catalog", "커피 기준정보", !sameFormValues(referenceDraft, savedReference), busy)
 
   useEffect(() => {
     let isActive = true
@@ -131,6 +136,7 @@ export function CoffeeCatalogAdminView() {
 
     return () => {
       isActive = false
+      profileRequest.current += 1
     }
   }, [])
 
@@ -139,7 +145,8 @@ export function CoffeeCatalogAdminView() {
     setMessage(getAdminErrorMessage(error))
   }
 
-  function selectTab(tab: CatalogTab) {
+  async function selectTab(tab: CatalogTab) {
+    if (tab === activeTab || !(await guard.confirmDiscard())) return
     setActiveTab(tab)
     setProfileEditor(null)
     clearReferenceForm()
@@ -161,40 +168,52 @@ export function CoffeeCatalogAdminView() {
   }
 
   async function startProfileEditing(profile: CoffeeProfile) {
+    if (profileEditor?.profile?.id === profile.id || !(await guard.confirmDiscard())) return
+    const request = ++profileRequest.current
     setPendingProfileId(profile.id)
     setMessage(null)
 
     try {
       const latestProfile = await getAdminCoffeeProfile(profile.id)
+      if (request !== profileRequest.current) return
       setProfileEditor({ key: `edit-${latestProfile.id}`, profile: latestProfile })
     } catch (error) {
-      showError(error)
+      if (request === profileRequest.current) showError(error)
     } finally {
-      setPendingProfileId(null)
+      if (request === profileRequest.current) setPendingProfileId(null)
     }
   }
 
   async function saveProfile(payload: CoffeeProfileRequest) {
-    if (profileEditor?.profile) {
-      await updateAdminCoffeeProfile(profileEditor.profile.id, payload)
-    } else {
-      await createAdminCoffeeProfile(payload)
-    }
+    setIsSubmitting(true)
+    try {
+      if (profileEditor?.profile) {
+        await updateAdminCoffeeProfile(profileEditor.profile.id, payload)
+      } else {
+        await createAdminCoffeeProfile(payload)
+      }
 
-    await refreshProfiles()
-    setProfileEditor(null)
-    setMessageTone("success")
-    setMessage("커피 프로필을 저장했습니다.")
+      setProfileEditor(null)
+      setMessageTone("success")
+      setMessage("커피 프로필을 저장했습니다.")
+      try { await refreshProfiles() } catch {
+        setMessageTone("error")
+        setMessage("커피 프로필을 저장했지만 목록을 불러오지 못했습니다. 화면을 새로고침해 주세요.")
+      }
+    } finally { setIsSubmitting(false) }
   }
 
-  function startReferenceEditing(reference: CoffeeReference) {
+  async function startReferenceEditing(reference: CoffeeReference) {
+    if (editingReferenceId === reference.id || !(await guard.confirmDiscard())) return
     setReferenceErrors({})
     setEditingReferenceId(reference.id)
-    setReferenceDraft({
+    const draft = {
       code: reference.code,
       name: reference.name,
       description: reference.description ?? "",
-    })
+    }
+    setReferenceDraft(draft)
+    setSavedReference(draft)
     setMessage(null)
   }
 
@@ -202,12 +221,13 @@ export function CoffeeCatalogAdminView() {
     setReferenceErrors({})
     setEditingReferenceId(null)
     setReferenceDraft(emptyReferenceDraft)
+    setSavedReference(emptyReferenceDraft)
   }
 
   async function saveReference(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (activeTab === "profiles") {
+    if (activeTab === "profiles" || busy) {
       return
     }
 
@@ -243,10 +263,13 @@ export function CoffeeCatalogAdminView() {
         })
       }
 
-      await refreshReferences(activeTab)
       clearReferenceForm()
       setMessageTone("success")
       setMessage("기준정보를 저장했습니다.")
+      try { await refreshReferences(activeTab) } catch {
+        setMessageTone("error")
+        setMessage("기준정보를 저장했지만 목록을 불러오지 못했습니다. 화면을 새로고침해 주세요.")
+      }
     } catch (error) {
       if (error instanceof ApiError) setReferenceErrors(validationErrorsToFieldMap(error.errors))
       showError(error)
@@ -262,7 +285,7 @@ export function CoffeeCatalogAdminView() {
   return (
     <Tabs.Root
       value={activeTab}
-      onValueChange={(value) => selectTab(value as CatalogTab)}
+      onValueChange={(value) => void selectTab(value as CatalogTab)}
       activationMode="manual"
       asChild
     >
@@ -273,7 +296,15 @@ export function CoffeeCatalogAdminView() {
               <Button
                 type="button"
                 className="catalog-tab"
+                disabled={busy}
                 variant={activeTab === tab.value ? "default" : "outline"}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    // 확인창으로 옮긴 초점에 같은 키의 기본 클릭이 이어지지 않게 한다.
+                    event.preventDefault()
+                    void selectTab(tab.value as CatalogTab)
+                  }
+                }}
               >
                 {tab.value === "profiles" && <Bean data-icon="inline-start" />}
                 {tab.label}
@@ -313,11 +344,13 @@ export function CoffeeCatalogAdminView() {
                   varieties={references["coffee-varieties"]}
                   onSave={saveProfile}
                   onCancel={() => setProfileEditor(null)}
+                  disabled={busy}
                 />
               ) : (
                 <div className="flex justify-end">
                   <Button
                     type="button"
+                    disabled={busy}
                     onClick={() =>
                       setProfileEditor({ key: `new-${Date.now()}`, profile: null })
                     }
@@ -356,7 +389,7 @@ export function CoffeeCatalogAdminView() {
                           size="sm"
                           aria-label={`${profile.profileName} 프로필 ${pendingProfileId === profile.id ? "불러오는 중" : "수정"}`}
                           aria-busy={pendingProfileId === profile.id}
-                          disabled={pendingProfileId === profile.id}
+                          disabled={busy}
                           onClick={() => void startProfileEditing(profile)}
                         >
                           <Pencil data-icon="inline-start" />
@@ -483,7 +516,7 @@ export function CoffeeCatalogAdminView() {
                       type="button"
                       variant="outline"
                       disabled={isSubmitting}
-                      onClick={clearReferenceForm}
+                      onClick={async () => { if (await guard.confirmDiscard()) clearReferenceForm() }}
                     >
                       <RotateCcw data-icon="inline-start" />
                       취소
@@ -529,7 +562,8 @@ export function CoffeeCatalogAdminView() {
                         variant="outline"
                         size="sm"
                         aria-label={`${reference.name} (${reference.code}) 기준정보 수정`}
-                        onClick={() => startReferenceEditing(reference)}
+                        disabled={busy}
+                        onClick={() => void startReferenceEditing(reference)}
                       >
                         <Pencil data-icon="inline-start" />
                         수정
